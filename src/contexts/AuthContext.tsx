@@ -1,17 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-  type User as FirebaseUser,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../utils/firebase';
+import { api } from '../utils/api';
 import type { User } from '../types';
 
 interface AuthContextType {
-  currentUser: FirebaseUser | null;
+  currentUser: User | null;
   userData: User | null;
   loading: boolean;
   register: (email: string, password: string, username: string, userData: Partial<User>) => Promise<void>;
@@ -31,76 +23,104 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function register(email: string, password: string, username: string, additionalData: Partial<User>) {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = api.getToken();
+      if (token) {
+        try {
+          const user = await api.getMe();
+          const userData: User = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            bodyWeight: user.bodyWeight,
+            bodyHeight: user.bodyHeight,
+            weeklyGoal: user.weeklyGoal,
+            darkMode: user.darkMode,
+            createdAt: new Date(user.createdAt)
+          };
+          setCurrentUser(userData);
+          setUserData(userData);
+        } catch {
+          api.logout();
+        }
+      }
+      setLoading(false);
+    };
+    checkAuth();
+  }, []);
 
-    const newUser: User = {
-      id: user.uid,
-      username,
+  async function register(email: string, password: string, username: string, additionalData: Partial<User>) {
+    const result = await api.register({
       email,
+      password,
+      username,
       bodyWeight: additionalData.bodyWeight,
       bodyHeight: additionalData.bodyHeight,
-      weeklyGoal: additionalData.weeklyGoal || 3,
-      darkMode: additionalData.darkMode ?? true,
-      createdAt: new Date()
-    };
-
-    await setDoc(doc(db, 'users', user.uid), {
-      ...newUser,
-      createdAt: newUser.createdAt.toISOString()
+      weeklyGoal: additionalData.weeklyGoal,
+      darkMode: additionalData.darkMode
     });
 
-    setUserData(newUser);
+    const userData: User = {
+      id: result.user.id,
+      username: result.user.username,
+      email: result.user.email,
+      bodyWeight: result.user.bodyWeight,
+      bodyHeight: result.user.bodyHeight,
+      weeklyGoal: result.user.weeklyGoal,
+      darkMode: result.user.darkMode,
+      createdAt: new Date(result.user.createdAt)
+    };
+
+    setCurrentUser(userData);
+    setUserData(userData);
   }
 
   async function login(emailOrUsername: string, password: string) {
-    // Try to login with email directly
-    await signInWithEmailAndPassword(auth, emailOrUsername, password);
+    const result = await api.login(emailOrUsername, password);
+
+    const userData: User = {
+      id: result.user.id,
+      username: result.user.username,
+      email: result.user.email,
+      bodyWeight: result.user.bodyWeight,
+      bodyHeight: result.user.bodyHeight,
+      weeklyGoal: result.user.weeklyGoal,
+      darkMode: result.user.darkMode,
+      createdAt: new Date(result.user.createdAt)
+    };
+
+    setCurrentUser(userData);
+    setUserData(userData);
   }
 
   async function logout() {
-    await signOut(auth);
+    api.logout();
+    setCurrentUser(null);
     setUserData(null);
   }
 
   async function updateUserData(data: Partial<User>) {
     if (!currentUser) return;
 
-    await setDoc(doc(db, 'users', currentUser.uid), data, { merge: true });
+    await api.updateMe({
+      bodyWeight: data.bodyWeight,
+      bodyHeight: data.bodyHeight,
+      weeklyGoal: data.weeklyGoal,
+      darkMode: data.darkMode
+    });
     
     if (userData) {
-      setUserData({ ...userData, ...data });
+      const updatedUser = { ...userData, ...data };
+      setUserData(updatedUser);
+      setCurrentUser(updatedUser);
     }
   }
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      
-      if (user) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setUserData({
-            ...data,
-            id: user.uid,
-            createdAt: new Date(data.createdAt)
-          } as User);
-        }
-      } else {
-        setUserData(null);
-      }
-      
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
 
   const value: AuthContextType = {
     currentUser,

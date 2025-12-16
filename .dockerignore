@@ -1,0 +1,12 @@
+node_modules
+dist
+server/node_modules
+server/dist
+.git
+.gitignore
+.env
+.env.local
+*.md
+*.log
+.DS_Store
+data

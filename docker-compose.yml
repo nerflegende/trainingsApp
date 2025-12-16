@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  trainingsapp:
+    build: .
+    container_name: trainingsapp
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - trainingsapp-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  trainingsapp-data:
+    driver: local

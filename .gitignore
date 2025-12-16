@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Server
+server/node_modules
+server/dist
+data/
+
 # Environment variables
 .env
 .env.local

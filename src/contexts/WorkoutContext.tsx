@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { collection, addDoc, doc, query, where, getDocs, orderBy, deleteDoc } from 'firebase/firestore';
-import { db } from '../utils/firebase';
+import { api } from '../utils/api';
 import { useAuth } from './AuthContext';
-import type { ActiveWorkout, WorkoutExercise, WorkoutPlan, WorkoutRecord, WorkoutSet, BodyMeasurement } from '../types';
+import type { ActiveWorkout, WorkoutExercise, WorkoutPlan, WorkoutRecord, WorkoutSet, BodyMeasurement, WorkoutDay } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface WorkoutContextType {
@@ -61,45 +60,40 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Load workout plans
-      const plansQuery = query(
-        collection(db, 'workoutPlans'),
-        where('userId', '==', currentUser.uid),
-        orderBy('createdAt', 'desc')
-      );
-      const plansSnapshot = await getDocs(plansQuery);
-      const plans = plansSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        createdAt: new Date(doc.data().createdAt)
-      })) as WorkoutPlan[];
+      const plansData = await api.getPlans();
+      const plans = plansData.map(plan => ({
+        id: plan.id,
+        userId: plan.userId,
+        name: plan.name,
+        description: plan.description || '',
+        days: plan.days as WorkoutDay[],
+        isTemplate: plan.isTemplate,
+        createdAt: new Date(plan.createdAt)
+      }));
       setWorkoutPlans(plans);
 
       // Load workout history
-      const historyQuery = query(
-        collection(db, 'workoutHistory'),
-        where('userId', '==', currentUser.uid),
-        orderBy('date', 'desc')
-      );
-      const historySnapshot = await getDocs(historyQuery);
-      const history = historySnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        date: new Date(doc.data().date)
-      })) as WorkoutRecord[];
+      const workoutsData = await api.getWorkouts();
+      const history = workoutsData.map(w => ({
+        id: w.id,
+        userId: w.userId,
+        date: new Date(w.date),
+        planName: w.planName,
+        dayName: w.dayName,
+        exercises: w.exercises as WorkoutExercise[],
+        duration: w.duration
+      }));
       setWorkoutHistory(history);
 
       // Load body measurements
-      const measurementsQuery = query(
-        collection(db, 'bodyMeasurements'),
-        where('userId', '==', currentUser.uid),
-        orderBy('date', 'desc')
-      );
-      const measurementsSnapshot = await getDocs(measurementsQuery);
-      const measurements = measurementsSnapshot.docs.map(doc => ({
-        ...doc.data(),
-        id: doc.id,
-        date: new Date(doc.data().date)
-      })) as BodyMeasurement[];
+      const measurementsData = await api.getMeasurements();
+      const measurements = measurementsData.map(m => ({
+        id: m.id,
+        userId: m.userId,
+        date: new Date(m.date),
+        weight: m.weight,
+        height: m.height
+      }));
       setBodyMeasurements(measurements);
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -113,7 +107,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
 
     const workout: ActiveWorkout = {
       id: uuidv4(),
-      userId: currentUser.uid,
+      userId: currentUser.id,
       startTime: new Date(),
       exercises: [],
       isCompleted: false
@@ -145,7 +139,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
       planName: plan.name,
       dayId: day.id,
       dayName: day.name,
-      userId: currentUser.uid,
+      userId: currentUser.id,
       startTime: new Date(),
       exercises,
       isCompleted: false
@@ -260,22 +254,24 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     const endTime = new Date();
     const duration = Math.round((endTime.getTime() - activeWorkout.startTime.getTime()) / 60000);
 
-    const record: Omit<WorkoutRecord, 'id'> = {
-      userId: currentUser.uid,
-      date: new Date(),
-      planName: activeWorkout.planName,
-      dayName: activeWorkout.dayName,
-      exercises: activeWorkout.exercises,
-      duration
-    };
-
     try {
-      const docRef = await addDoc(collection(db, 'workoutHistory'), {
-        ...record,
-        date: record.date.toISOString()
+      const result = await api.saveWorkout({
+        date: new Date().toISOString(),
+        planName: activeWorkout.planName,
+        dayName: activeWorkout.dayName,
+        exercises: activeWorkout.exercises,
+        duration
       });
 
-      const savedRecord: WorkoutRecord = { ...record, id: docRef.id };
+      const savedRecord: WorkoutRecord = {
+        id: result.id,
+        userId: result.userId,
+        date: new Date(result.date),
+        planName: result.planName,
+        dayName: result.dayName,
+        exercises: result.exercises as WorkoutExercise[],
+        duration: result.duration
+      };
       setWorkoutHistory(prev => [savedRecord, ...prev]);
       setActiveWorkout(null);
       return savedRecord;
@@ -292,18 +288,22 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   async function savePlan(plan: Omit<WorkoutPlan, 'id' | 'userId' | 'createdAt'>) {
     if (!currentUser) return;
 
-    const newPlan = {
-      ...plan,
-      userId: currentUser.uid,
-      createdAt: new Date().toISOString()
-    };
-
     try {
-      const docRef = await addDoc(collection(db, 'workoutPlans'), newPlan);
+      const result = await api.createPlan({
+        name: plan.name,
+        description: plan.description,
+        days: plan.days,
+        isTemplate: plan.isTemplate
+      });
+      
       setWorkoutPlans(prev => [{
-        ...newPlan,
-        id: docRef.id,
-        createdAt: new Date(newPlan.createdAt)
+        id: result.id,
+        userId: result.userId,
+        name: result.name,
+        description: result.description || '',
+        days: result.days as WorkoutDay[],
+        isTemplate: result.isTemplate,
+        createdAt: new Date(result.createdAt)
       }, ...prev]);
     } catch (error) {
       console.error('Error saving plan:', error);
@@ -312,7 +312,7 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
 
   async function deletePlan(planId: string) {
     try {
-      await deleteDoc(doc(db, 'workoutPlans', planId));
+      await api.deletePlan(planId);
       setWorkoutPlans(prev => prev.filter(p => p.id !== planId));
     } catch (error) {
       console.error('Error deleting plan:', error);
@@ -322,22 +322,15 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   async function addBodyMeasurement(weight?: number, height?: number) {
     if (!currentUser) return;
 
-    const measurement: Omit<BodyMeasurement, 'id'> = {
-      userId: currentUser.uid,
-      date: new Date(),
-      weight,
-      height
-    };
-
     try {
-      const docRef = await addDoc(collection(db, 'bodyMeasurements'), {
-        ...measurement,
-        date: measurement.date.toISOString()
-      });
-
+      const result = await api.addMeasurement({ weight, height });
+      
       setBodyMeasurements(prev => [{
-        ...measurement,
-        id: docRef.id
+        id: result.id,
+        userId: result.userId,
+        date: new Date(result.date),
+        weight: result.weight,
+        height: result.height
       }, ...prev]);
     } catch (error) {
       console.error('Error saving body measurement:', error);
