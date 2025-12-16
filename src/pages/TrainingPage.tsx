@@ -100,18 +100,19 @@ export function TrainingPage() {
     }
   };
 
-  const saveEdit = () => {
+  const saveEdit = (valueOverride?: string) => {
     if (!editingExercise) return;
     const { exercise, field, setIndex } = editingExercise;
+    const value = valueOverride !== undefined ? valueOverride : editValue;
 
     if (field === 'reps' && setIndex !== undefined) {
-      updateSet(exercise.id, exercise.sets[setIndex].id, { reps: parseInt(editValue) || 0 });
+      updateSet(exercise.id, exercise.sets[setIndex].id, { reps: parseInt(value) || 0 });
     } else if (field === 'weight' && setIndex !== undefined) {
-      updateSet(exercise.id, exercise.sets[setIndex].id, { weight: parseFloat(editValue) || undefined });
+      updateSet(exercise.id, exercise.sets[setIndex].id, { weight: parseFloat(value) || undefined });
     } else if (field === 'gadget') {
-      updateExercise(exercise.id, { gadget: editValue });
+      updateExercise(exercise.id, { gadget: value });
     } else if (field === 'sets') {
-      const newSetsCount = parseInt(editValue) || 1;
+      const newSetsCount = parseInt(value) || 1;
       const currentSetsCount = exercise.sets.length;
       
       if (newSetsCount > currentSetsCount) {
@@ -501,10 +502,7 @@ export function TrainingPage() {
             {defaultGadgets.map(gadget => (
               <button
                 key={gadget.id}
-                onClick={() => {
-                  setEditValue(gadget.name);
-                  setTimeout(saveEdit, 0);
-                }}
+                onClick={() => saveEdit(gadget.name)}
                 className={`w-full p-3 rounded-lg text-left ${
                   editValue === gadget.name
                     ? 'bg-primary text-white'
@@ -530,7 +528,7 @@ export function TrainingPage() {
               }
               autoFocus
             />
-            <Button fullWidth onClick={saveEdit}>
+            <Button fullWidth onClick={() => saveEdit()}>
               Speichern
             </Button>
           </div>

@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# TrainingsApp
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Eine moderne Web-App zum Tracken von Krafttraining und Calisthenics.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🏋️ **Training Tracking**: Übungen, Sätze, Wiederholungen und Gewichte tracken
+- 📋 **Trainingspläne**: Eigene Pläne erstellen und speichern
+- 📅 **Kalender**: Trainingshistorie im Monatsüberblick
+- 🔥 **Streak System**: Motivation durch Wochenstreaks
+- ⏱️ **Timer**: Pausentimer und Stoppuhr während des Trainings
+- 📊 **Körpermaße**: Gewicht und Größe tracken
+- 🌙 **Dark/Light Mode**: Wählbares App-Design
+- 👤 **Account System**: Daten auf allen Geräten synchronisieren
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 19, TypeScript, Tailwind CSS 4
+- **Build Tool**: Vite
+- **Backend**: Firebase (Authentication + Firestore)
+- **Icons**: Lucide React
 
-## Expanding the ESLint configuration
+## Installation
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Repository klonen:
+\`\`\`bash
+git clone https://github.com/nerflegende/trainingsApp.git
+cd trainingsApp
+\`\`\`
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. Dependencies installieren:
+\`\`\`bash
+npm install
+\`\`\`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. Firebase-Projekt einrichten:
+   - Neues Projekt auf [Firebase Console](https://console.firebase.google.com) erstellen
+   - Authentication aktivieren (Email/Password)
+   - Firestore Database erstellen
+   - \`.env.example\` zu \`.env\` kopieren und Firebase-Credentials eintragen
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+4. Entwicklungsserver starten:
+\`\`\`bash
+npm run dev
+\`\`\`
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Kopiere \`.env.example\` zu \`.env\` und fülle die Firebase-Credentials aus:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+\`\`\`env
+VITE_FIREBASE_API_KEY=your-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=your-app-id
+\`\`\`
+
+## Scripts
+
+- \`npm run dev\` - Entwicklungsserver starten
+- \`npm run build\` - Produktionsbuild erstellen
+- \`npm run preview\` - Produktionsbuild lokal testen
+- \`npm run lint\` - Code-Linting
+
+## License
+
+MIT
