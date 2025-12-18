@@ -15,7 +15,7 @@ dist-ssr
 # Server
 server/node_modules
 server/dist
-server/data/
+/data/
 
 # Environment variables
 .env
