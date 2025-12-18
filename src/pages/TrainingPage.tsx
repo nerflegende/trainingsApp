@@ -807,7 +807,7 @@ export function TrainingPage() {
       <Modal
         isOpen={workoutSummary !== null}
         onClose={handleCloseSummary}
-        title="Training abgeschlossen! ��"
+        title="Training abgeschlossen! 🎉"
       >
         {workoutSummary && (
           <div className="space-y-4">
