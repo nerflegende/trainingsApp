@@ -4,7 +4,10 @@ export interface User {
   email: string;
   bodyWeight?: number;
   bodyHeight?: number;
+  age?: number;
   weeklyGoal: number;
+  stepGoal?: number;
+  palValue?: number; // Physical Activity Level: 1.2-2.4
   darkMode: boolean;
   createdAt: Date;
 }

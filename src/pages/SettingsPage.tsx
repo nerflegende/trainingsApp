@@ -1,23 +1,18 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { 
   ClipboardList, 
   Dumbbell, 
   Wrench, 
-  Ruler, 
-  Target, 
   Settings, 
-  LogOut, 
   Plus, 
   Trash2, 
   ChevronRight,
   Sun,
   Moon,
-  Edit2,
-  Save,
-  X
+  ExternalLink,
+  Github
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Button } from '../components/Button';
@@ -27,19 +22,17 @@ import { defaultExercises, defaultGadgets } from '../data/defaultData';
 import type { WorkoutDay, PlannedExercise, Exercise, Gadget } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
-type TabType = 'plans' | 'exercises' | 'gadgets' | 'body' | 'goal' | 'settings';
+type TabType = 'plans' | 'exercises' | 'gadgets' | 'settings';
 
-export function ProfilePage() {
+export function SettingsPage() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { userData, updateUserData, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useTheme();
-  const { workoutPlans, savePlan, deletePlan, addBodyMeasurement, bodyMeasurements } = useWorkout();
+  const { workoutPlans, savePlan, deletePlan } = useWorkout();
 
   // Get initial tab from location state
   const getInitialTab = (): TabType => {
     const state = location.state as { tab?: string } | undefined;
-    if (state?.tab && ['plans', 'exercises', 'gadgets', 'body', 'goal', 'settings'].includes(state.tab)) {
+    if (state?.tab && ['plans', 'exercises', 'gadgets', 'settings'].includes(state.tab)) {
       return state.tab as TabType;
     }
     return 'plans';
@@ -47,7 +40,6 @@ export function ProfilePage() {
 
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab);
   const [showCreatePlan, setShowCreatePlan] = useState(false);
-  const [showAddWeight, setShowAddWeight] = useState(false);
   const [showExerciseDetail, setShowExerciseDetail] = useState<Exercise | null>(null);
   const [showGadgetDetail, setShowGadgetDetail] = useState<Gadget | null>(null);
   
@@ -63,27 +55,12 @@ export function ProfilePage() {
   const [showAddExerciseToPlan, setShowAddExerciseToPlan] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
 
-  // Body measurement state
-  const [newWeight, setNewWeight] = useState('');
-  const [newHeight, setNewHeight] = useState('');
-
-  // Settings state
-  const [editingGoal, setEditingGoal] = useState(false);
-  const [newGoal, setNewGoal] = useState(userData?.weeklyGoal || 3);
-
   const tabs: { id: TabType; label: string; icon: typeof ClipboardList }[] = [
     { id: 'plans', label: 'Pläne', icon: ClipboardList },
     { id: 'exercises', label: 'Übungen', icon: Dumbbell },
     { id: 'gadgets', label: 'Gadgets', icon: Wrench },
-    { id: 'body', label: 'Körpermaße', icon: Ruler },
-    { id: 'goal', label: 'Ziel', icon: Target },
-    { id: 'settings', label: 'Einstellungen', icon: Settings }
+    { id: 'settings', label: 'App', icon: Settings }
   ];
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/auth');
-  };
 
   const handleSavePlan = async () => {
     if (!planName.trim()) return;
@@ -162,23 +139,6 @@ export function ProfilePage() {
           }
         : day
     ));
-  };
-
-  const handleAddMeasurement = async () => {
-    const weight = newWeight ? parseFloat(newWeight) : undefined;
-    const height = newHeight ? parseFloat(newHeight) : undefined;
-    
-    if (weight || height) {
-      await addBodyMeasurement(weight, height);
-      setNewWeight('');
-      setNewHeight('');
-      setShowAddWeight(false);
-    }
-  };
-
-  const handleSaveGoal = async () => {
-    await updateUserData({ weeklyGoal: newGoal });
-    setEditingGoal(false);
   };
 
   const filteredExercises = defaultExercises.filter(ex =>
@@ -285,147 +245,6 @@ export function ProfilePage() {
           </div>
         );
 
-      case 'body':
-        return (
-          <div className="space-y-4">
-            <Button fullWidth onClick={() => setShowAddWeight(true)}>
-              <Plus size={20} />
-              Messung eintragen
-            </Button>
-
-            {/* Current Stats */}
-            <div className={`p-4 rounded-xl ${
-              darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
-            }`}>
-              <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Aktuelle Werte
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className={`p-4 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Gewicht
-                  </p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {bodyMeasurements[0]?.weight || userData?.bodyWeight || '-'} kg
-                  </p>
-                </div>
-                <div className={`p-4 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Größe
-                  </p>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {bodyMeasurements[0]?.height || userData?.bodyHeight || '-'} cm
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* History */}
-            {bodyMeasurements.length > 0 && (
-              <div className={`p-4 rounded-xl ${
-                darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
-              }`}>
-                <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Verlauf
-                </h3>
-                <div className="space-y-2">
-                  {bodyMeasurements.slice(0, 10).map(m => (
-                    <div
-                      key={m.id}
-                      className={`flex justify-between py-2 border-b ${
-                        darkMode ? 'border-dark-border' : 'border-light-border'
-                      } last:border-0`}
-                    >
-                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                        {new Date(m.date).toLocaleDateString('de-DE')}
-                      </span>
-                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
-                        {m.weight && `${m.weight} kg`}
-                        {m.weight && m.height && ' • '}
-                        {m.height && `${m.height} cm`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'goal':
-        return (
-          <div className={`p-6 rounded-xl ${
-            darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
-          }`}>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Wöchentliches Trainingsziel
-              </h3>
-              {!editingGoal ? (
-                <button
-                  onClick={() => {
-                    setNewGoal(userData?.weeklyGoal || 3);
-                    setEditingGoal(true);
-                  }}
-                  className={`p-2 rounded-full ${
-                    darkMode ? 'hover:bg-dark-border' : 'hover:bg-gray-200'
-                  }`}
-                >
-                  <Edit2 size={18} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSaveGoal}
-                    className="p-2 rounded-full bg-green-500/20 text-green-500"
-                  >
-                    <Save size={18} />
-                  </button>
-                  <button
-                    onClick={() => setEditingGoal(false)}
-                    className="p-2 rounded-full bg-red-500/20 text-red-500"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {editingGoal ? (
-              <div className="flex gap-2">
-                {[1, 2, 3, 4, 5, 6, 7].map(num => (
-                  <button
-                    key={num}
-                    onClick={() => setNewGoal(num)}
-                    className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
-                      newGoal === num
-                        ? 'bg-primary text-white'
-                        : darkMode
-                        ? 'bg-dark-border text-gray-300 hover:bg-gray-700'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {num}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center">
-                <p className={`text-5xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {userData?.weeklyGoal || 3}x
-                </p>
-                <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  Trainingseinheiten pro Woche
-                </p>
-              </div>
-            )}
-
-            <p className={`text-sm mt-6 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-              Deine Streak wird basierend auf diesem Ziel berechnet
-            </p>
-          </div>
-        );
-
       case 'settings':
         return (
           <div className="space-y-4">
@@ -451,34 +270,53 @@ export function ProfilePage() {
               </button>
             </div>
 
-            {/* User Info */}
+            {/* Links */}
             <div className={`p-4 rounded-xl ${
               darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
             }`}>
               <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                Account
+                Links
               </h3>
-              <div className="space-y-2">
-                <div className={`flex justify-between ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <span>Nutzername</span>
-                  <span className="font-medium">{userData?.username}</span>
-                </div>
-                <div className={`flex justify-between ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <span>E-Mail</span>
-                  <span className="font-medium">{userData?.email}</span>
-                </div>
+              <div className="space-y-3">
+                <a
+                  href="https://ricek.de"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                    darkMode ? 'bg-dark-border hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className={darkMode ? 'text-white' : 'text-gray-900'}>Developer Website</span>
+                  <ExternalLink size={18} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                </a>
+                <a
+                  href="https://github.com/nerflegende"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                    darkMode ? 'bg-dark-border hover:bg-gray-700' : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Github size={18} className={darkMode ? 'text-white' : 'text-gray-900'} />
+                    <span className={darkMode ? 'text-white' : 'text-gray-900'}>GitHub</span>
+                  </div>
+                  <ExternalLink size={18} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                </a>
               </div>
             </div>
 
-            {/* Logout */}
-            <Button
-              fullWidth
-              variant="danger"
-              onClick={handleLogout}
-            >
-              <LogOut size={20} />
-              Abmelden
-            </Button>
+            {/* App Info */}
+            <div className={`p-4 rounded-xl text-center ${
+              darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
+            }`}>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                TrainingsApp v1.0.0
+              </p>
+              <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                Made with ❤️ for fitness enthusiasts
+              </p>
+            </div>
           </div>
         );
     }
@@ -489,7 +327,7 @@ export function ProfilePage() {
       {/* Header */}
       <div className={`p-6 ${darkMode ? 'bg-dark-card' : 'bg-light-card'}`}>
         <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          Profil
+          Einstellungen
         </h1>
       </div>
 
@@ -698,34 +536,6 @@ export function ProfilePage() {
               </button>
             ))}
           </div>
-        </div>
-      </Modal>
-
-      {/* Add Weight Modal */}
-      <Modal
-        isOpen={showAddWeight}
-        onClose={() => setShowAddWeight(false)}
-        title="Körpermaße eintragen"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Gewicht (kg)"
-            type="number"
-            value={newWeight}
-            onChange={(e) => setNewWeight(e.target.value)}
-            placeholder="z.B. 75"
-            step="0.1"
-          />
-          <Input
-            label="Größe (cm)"
-            type="number"
-            value={newHeight}
-            onChange={(e) => setNewHeight(e.target.value)}
-            placeholder="z.B. 180"
-          />
-          <Button fullWidth onClick={handleAddMeasurement}>
-            Speichern
-          </Button>
         </div>
       </Modal>
 

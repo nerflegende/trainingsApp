@@ -6,6 +6,21 @@ import { generateToken, authMiddleware, AuthRequest } from '../auth.js';
 
 const router = Router();
 
+interface UserRow {
+  id: string;
+  username: string;
+  email: string;
+  password_hash: string;
+  body_weight: number | null;
+  body_height: number | null;
+  age: number | null;
+  weekly_goal: number;
+  step_goal: number | null;
+  pal_value: number | null;
+  dark_mode: number;
+  created_at: string;
+}
+
 // Register
 router.post('/register', async (req, res: Response) => {
   try {
@@ -47,7 +62,10 @@ router.post('/register', async (req, res: Response) => {
         email,
         bodyWeight,
         bodyHeight,
+        age: null,
         weeklyGoal: weeklyGoal || 3,
+        stepGoal: 10000,
+        palValue: 1.4,
         darkMode: darkMode ?? true,
         createdAt
       }
@@ -69,17 +87,7 @@ router.post('/login', async (req, res: Response) => {
     }
 
     // Find user
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as {
-      id: string;
-      username: string;
-      email: string;
-      password_hash: string;
-      body_weight: number | null;
-      body_height: number | null;
-      weekly_goal: number;
-      dark_mode: number;
-      created_at: string;
-    } | undefined;
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as UserRow | undefined;
 
     if (!user) {
       res.status(401).json({ error: 'Ungültige Anmeldedaten' });
@@ -104,7 +112,10 @@ router.post('/login', async (req, res: Response) => {
         email: user.email,
         bodyWeight: user.body_weight,
         bodyHeight: user.body_height,
+        age: user.age,
         weeklyGoal: user.weekly_goal,
+        stepGoal: user.step_goal,
+        palValue: user.pal_value,
         darkMode: user.dark_mode === 1,
         createdAt: user.created_at
       }
@@ -118,16 +129,7 @@ router.post('/login', async (req, res: Response) => {
 // Get current user
 router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId) as {
-      id: string;
-      username: string;
-      email: string;
-      body_weight: number | null;
-      body_height: number | null;
-      weekly_goal: number;
-      dark_mode: number;
-      created_at: string;
-    } | undefined;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.userId) as UserRow | undefined;
 
     if (!user) {
       res.status(404).json({ error: 'Benutzer nicht gefunden' });
@@ -140,7 +142,10 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       email: user.email,
       bodyWeight: user.body_weight,
       bodyHeight: user.body_height,
+      age: user.age,
       weeklyGoal: user.weekly_goal,
+      stepGoal: user.step_goal,
+      palValue: user.pal_value,
       darkMode: user.dark_mode === 1,
       createdAt: user.created_at
     });
@@ -164,9 +169,21 @@ router.patch('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       updates.push('body_height = ?');
       values.push(req.body.bodyHeight);
     }
+    if (req.body.age !== undefined) {
+      updates.push('age = ?');
+      values.push(req.body.age);
+    }
     if (req.body.weeklyGoal !== undefined) {
       updates.push('weekly_goal = ?');
       values.push(req.body.weeklyGoal);
+    }
+    if (req.body.stepGoal !== undefined) {
+      updates.push('step_goal = ?');
+      values.push(req.body.stepGoal);
+    }
+    if (req.body.palValue !== undefined) {
+      updates.push('pal_value = ?');
+      values.push(req.body.palValue);
     }
     if (req.body.darkMode !== undefined) {
       updates.push('dark_mode = ?');

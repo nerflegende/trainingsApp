@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Play, Plus, Flame, Scale } from 'lucide-react';
+import { Play, Plus, Flame, Scale, User } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Button } from '../components/Button';
+import { getQuoteForSession } from '../data/quotes';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ export function HomePage() {
 
   const lastWeight = bodyMeasurements.length > 0 ? bodyMeasurements[0].weight : userData?.bodyWeight;
   const streak = calculateStreak();
+  const quote = getQuoteForSession();
 
   return (
     <div className={`min-h-screen pb-20 ${darkMode ? 'bg-dark' : 'bg-light'}`}>
@@ -28,10 +30,22 @@ export function HomePage() {
             </p>
           </div>
           
-          {/* Streak */}
-          <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-full">
-            <Flame size={24} className="text-yellow-300" />
-            <span className="text-white font-bold text-lg">{streak}</span>
+          {/* Streak and Profile */}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-full">
+              <Flame size={24} className="text-yellow-300" />
+              <span className="text-white font-bold text-lg">{streak}</span>
+            </div>
+            <button
+              onClick={() => navigate('/user-profile')}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                darkMode 
+                  ? 'bg-dark-border hover:bg-gray-700' 
+                  : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+            >
+              <User size={20} className={darkMode ? 'text-gray-300' : 'text-gray-600'} />
+            </button>
           </div>
         </div>
       </div>
@@ -54,7 +68,7 @@ export function HomePage() {
             variant="outline"
             size="lg"
             fullWidth
-            onClick={() => navigate('/profile', { state: { tab: 'plans' } })}
+            onClick={() => navigate('/settings', { state: { tab: 'plans' } })}
             className="py-6"
           >
             <Plus size={24} />
@@ -64,7 +78,7 @@ export function HomePage() {
 
         {/* Weight Card */}
         <div
-          onClick={() => navigate('/profile', { state: { tab: 'body' } })}
+          onClick={() => navigate('/user-profile', { state: { tab: 'body' } })}
           className={`p-6 rounded-xl cursor-pointer transition-all hover:scale-[1.02] ${
             darkMode 
               ? 'bg-dark-card border border-dark-border hover:border-primary' 
@@ -91,40 +105,12 @@ export function HomePage() {
           </div>
         </div>
 
-        {/* Weekly Goal */}
-        <div className={`p-6 rounded-xl ${
-          darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
-        }`}>
-          <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-            Wochenziel: {userData?.weeklyGoal || 3}x Training
-          </h3>
-          <div className="flex gap-2">
-            {Array.from({ length: 7 }, (_, i) => (
-              <div
-                key={i}
-                className={`flex-1 h-3 rounded-full ${
-                  i < (userData?.weeklyGoal || 3)
-                    ? 'bg-primary'
-                    : darkMode
-                    ? 'bg-dark-border'
-                    : 'bg-gray-200'
-                }`}
-              />
-            ))}
-          </div>
-          <p className={`text-sm mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            {streak > 0 
-              ? `🔥 ${streak} Woche${streak > 1 ? 'n' : ''} Streak!` 
-              : 'Starte deine Streak noch heute!'}
-          </p>
-        </div>
-
         {/* Motivation Quote */}
         <div className={`p-6 rounded-xl bg-gradient-to-br from-primary to-primary-dark`}>
           <p className="text-white text-lg font-medium italic">
-            "Die einzige schlechte Trainingseinheit ist die, die nicht stattgefunden hat."
+            "{quote.text}"
           </p>
-          <p className="text-white/70 text-sm mt-2">— Unbekannt</p>
+          <p className="text-white/70 text-sm mt-2">— {quote.author}</p>
         </div>
       </div>
     </div>

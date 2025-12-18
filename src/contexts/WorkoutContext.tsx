@@ -40,7 +40,7 @@ export function useWorkout() {
 }
 
 export function WorkoutProvider({ children }: { children: React.ReactNode }) {
-  const { currentUser, userData } = useAuth();
+  const { currentUser } = useAuth();
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutRecord[]>([]);
@@ -352,42 +352,23 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   }
 
   function calculateStreak(): number {
-    if (!userData) return 0;
-
-    const weeklyGoal = userData.weeklyGoal || 3;
+    // Count total workouts this week toward the weekly goal
+    // Returns the number of training days completed this week
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let streak = 0;
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
+    // Get start of current week (Sunday)
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
-    // Check each week going backwards
-    while (true) {
-      const weekEnd = new Date(currentWeekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      weekEnd.setHours(23, 59, 59, 999);
+    // Count workouts this week
+    const workoutsThisWeek = workoutHistory.filter(w => {
+      const workoutDate = new Date(w.date);
+      workoutDate.setHours(0, 0, 0, 0);
+      return workoutDate >= weekStart && workoutDate <= today;
+    }).length;
 
-      const workoutsThisWeek = workoutHistory.filter(w => {
-        const workoutDate = new Date(w.date);
-        return workoutDate >= currentWeekStart && workoutDate <= weekEnd;
-      }).length;
-
-      if (workoutsThisWeek >= weeklyGoal) {
-        streak++;
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-      } else if (currentWeekStart <= today && weekEnd >= today) {
-        // Current week - don't break streak yet
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
-      } else {
-        break;
-      }
-
-      // Safety check - don't go back more than a year
-      if (streak > 52) break;
-    }
-
-    return streak;
+    return workoutsThisWeek;
   }
 
   const value: WorkoutContextType = {

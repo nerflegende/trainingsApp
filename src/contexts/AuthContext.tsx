@@ -40,7 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: user.email,
             bodyWeight: user.bodyWeight,
             bodyHeight: user.bodyHeight,
+            age: user.age,
             weeklyGoal: user.weeklyGoal,
+            stepGoal: user.stepGoal,
+            palValue: user.palValue,
             darkMode: user.darkMode,
             createdAt: new Date(user.createdAt)
           };
@@ -72,7 +75,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: result.user.email,
       bodyWeight: result.user.bodyWeight,
       bodyHeight: result.user.bodyHeight,
+      age: result.user.age,
       weeklyGoal: result.user.weeklyGoal,
+      stepGoal: result.user.stepGoal,
+      palValue: result.user.palValue,
       darkMode: result.user.darkMode,
       createdAt: new Date(result.user.createdAt)
     };
@@ -90,7 +96,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: result.user.email,
       bodyWeight: result.user.bodyWeight,
       bodyHeight: result.user.bodyHeight,
+      age: result.user.age,
       weeklyGoal: result.user.weeklyGoal,
+      stepGoal: result.user.stepGoal,
+      palValue: result.user.palValue,
       darkMode: result.user.darkMode,
       createdAt: new Date(result.user.createdAt)
     };
@@ -112,7 +121,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       bodyWeight: data.bodyWeight,
       bodyHeight: data.bodyHeight,
       weeklyGoal: data.weeklyGoal,
-      darkMode: data.darkMode
+      darkMode: data.darkMode,
+      age: data.age,
+      stepGoal: data.stepGoal,
+      palValue: data.palValue
     });
     
     if (userData) {

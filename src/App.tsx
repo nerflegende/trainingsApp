@@ -7,7 +7,8 @@ import { AuthPage } from './pages/AuthPage';
 import { HomePage } from './pages/HomePage';
 import { TrainingPage } from './pages/TrainingPage';
 import { CalendarPage } from './pages/CalendarPage';
-import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { UserProfilePage } from './pages/UserProfilePage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, loading } = useAuth();
@@ -55,10 +56,18 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/profile"
+          path="/settings"
           element={
             <PrivateRoute>
-              <ProfilePage />
+              <SettingsPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/user-profile"
+          element={
+            <PrivateRoute>
+              <UserProfilePage />
             </PrivateRoute>
           }
         />

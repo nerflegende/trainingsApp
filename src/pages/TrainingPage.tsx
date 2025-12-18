@@ -1,12 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Plus, Check, Trash2, Edit2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Plus, Check, Trash2, Edit2, ChevronDown, ChevronUp, Clock, Timer, Pause, RotateCcw } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
-import { WorkoutTimer } from '../components/WorkoutTimer';
 import { defaultExercises, defaultGadgets } from '../data/defaultData';
 import type { WorkoutPlan, WorkoutExercise, WorkoutRecord } from '../types';
 
@@ -43,6 +42,102 @@ export function TrainingPage() {
   const [editValue, setEditValue] = useState('');
   const [searchExercise, setSearchExercise] = useState('');
 
+  // Timer states - using refs to persist across renders and handle background
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const [restTime, setRestTime] = useState(90);
+  const [restRemaining, setRestRemaining] = useState(0);
+  const [restRunning, setRestRunning] = useState(false);
+  const [showRestSettings, setShowRestSettings] = useState(false);
+  
+  const startTimeRef = useRef<number | null>(null);
+  const elapsedRef = useRef(0);
+  const restStartRef = useRef<number | null>(null);
+  const restElapsedRef = useRef(0);
+
+  // Auto-expand first exercise when workout starts
+  useEffect(() => {
+    if (activeWorkout && activeWorkout.exercises.length > 0 && !expandedExercise) {
+      setExpandedExercise(activeWorkout.exercises[0].id);
+    }
+  }, [activeWorkout, expandedExercise]);
+
+  // Timer effect - uses performance.now() for accuracy even when backgrounded
+  useEffect(() => {
+    if (!activeWorkout) return;
+
+    if (startTimeRef.current === null) {
+      startTimeRef.current = performance.now();
+      elapsedRef.current = 0;
+    }
+
+    const updateTimer = () => {
+      if (startTimeRef.current !== null) {
+        const now = performance.now();
+        const totalElapsed = Math.floor((now - startTimeRef.current) / 1000) + elapsedRef.current;
+        setElapsedTime(totalElapsed);
+      }
+    };
+
+    const interval = setInterval(updateTimer, 1000);
+    
+    // Also update on visibility change to catch up
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updateTimer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [activeWorkout]);
+
+  // Rest timer effect
+  useEffect(() => {
+    if (!restRunning || restRemaining <= 0) return;
+
+    if (restStartRef.current === null) {
+      restStartRef.current = performance.now();
+      restElapsedRef.current = 0;
+    }
+
+    const updateRestTimer = () => {
+      if (restStartRef.current !== null) {
+        const now = performance.now();
+        const elapsed = Math.floor((now - restStartRef.current) / 1000);
+        const remaining = restTime - elapsed;
+        
+        if (remaining <= 0) {
+          setRestRemaining(0);
+          setRestRunning(false);
+          restStartRef.current = null;
+          // Vibrate when rest is done
+          if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200, 100, 200]);
+          }
+        } else {
+          setRestRemaining(remaining);
+        }
+      }
+    };
+
+    const interval = setInterval(updateRestTimer, 100);
+    
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updateRestTimer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [restRunning, restRemaining, restTime]);
+
   const filteredExercises = defaultExercises.filter(ex =>
     ex.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
     ex.muscles.some(m => m.toLowerCase().includes(searchExercise.toLowerCase()))
@@ -51,6 +146,8 @@ export function TrainingPage() {
   const handleStartFreeWorkout = () => {
     startFreeWorkout();
     setShowStartModal(false);
+    startTimeRef.current = performance.now();
+    elapsedRef.current = 0;
   };
 
   const handleSelectPlan = () => {
@@ -62,6 +159,12 @@ export function TrainingPage() {
     startPlanWorkout(plan, dayIndex);
     setShowDaySelect(null);
     setShowPlanSelect(false);
+    startTimeRef.current = performance.now();
+    elapsedRef.current = 0;
+    // Auto-expand first exercise
+    if (plan.days[dayIndex].exercises.length > 0) {
+      // Will be set by useEffect
+    }
   };
 
   const handleAddExercise = (exerciseId: string, exerciseName: string) => {
@@ -76,11 +179,54 @@ export function TrainingPage() {
       setWorkoutSummary(summary);
     }
     setShowEndWorkout(false);
+    startTimeRef.current = null;
+    elapsedRef.current = 0;
   };
 
   const handleCloseSummary = () => {
     setWorkoutSummary(null);
     navigate('/');
+  };
+
+  // Handle set completion - start rest timer and auto-expand next exercise
+  const handleSetComplete = useCallback((exerciseId: string, setId: string, completed: boolean) => {
+    updateSet(exerciseId, setId, { completed });
+    
+    if (completed && activeWorkout) {
+      // Start rest timer
+      setRestRemaining(restTime);
+      setRestRunning(true);
+      restStartRef.current = performance.now();
+      
+      // Check if this was the last set of the exercise
+      const exerciseIndex = activeWorkout.exercises.findIndex(ex => ex.id === exerciseId);
+      if (exerciseIndex !== -1) {
+        const exercise = activeWorkout.exercises[exerciseIndex];
+        const allSetsComplete = exercise.sets.every(s => s.id === setId ? completed : s.completed);
+        
+        if (allSetsComplete && exerciseIndex < activeWorkout.exercises.length - 1) {
+          // Auto-expand next exercise
+          setExpandedExercise(activeWorkout.exercises[exerciseIndex + 1].id);
+        }
+      }
+    }
+  }, [activeWorkout, restTime, updateSet]);
+
+  const startRestTimer = () => {
+    setRestRemaining(restTime);
+    setRestRunning(true);
+    restStartRef.current = performance.now();
+  };
+
+  const stopRestTimer = () => {
+    setRestRunning(false);
+    restStartRef.current = null;
+  };
+
+  const resetRestTimer = () => {
+    setRestRemaining(restTime);
+    setRestRunning(false);
+    restStartRef.current = null;
   };
 
   const openEditModal = (
@@ -130,17 +276,25 @@ export function TrainingPage() {
     setEditValue('');
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const restOptions = [30, 60, 90, 120, 180, 300];
+
   // If no active workout, show start options
   if (!activeWorkout) {
     return (
       <div className={`min-h-screen pb-20 ${darkMode ? 'bg-dark' : 'bg-light'}`}>
         <div className={`p-6 ${darkMode ? 'bg-dark-card' : 'bg-light-card'}`}>
-          <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+          <h1 className={`text-2xl font-bold text-center ${darkMode ? 'text-white' : 'text-gray-900'}`}>
             Training
           </h1>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 max-w-lg mx-auto">
           <div className={`p-8 rounded-xl text-center ${
             darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
           }`}>
@@ -189,7 +343,7 @@ export function TrainingPage() {
             {workoutPlans.length === 0 ? (
               <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 <p className="mb-4">Keine Pläne vorhanden</p>
-                <Button variant="outline" onClick={() => navigate('/profile', { state: { tab: 'plans' } })}>
+                <Button variant="outline" onClick={() => navigate('/settings', { state: { tab: 'plans' } })}>
                   Plan erstellen
                 </Button>
               </div>
@@ -254,23 +408,68 @@ export function TrainingPage() {
       <div className={`p-4 sticky top-0 z-40 ${darkMode ? 'bg-dark-card' : 'bg-light-card'} border-b ${
         darkMode ? 'border-dark-border' : 'border-light-border'
       }`}>
-        <div className="flex justify-between items-center mb-2">
-          <div>
-            <h1 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              {activeWorkout.planName || 'Freies Training'}
-            </h1>
-            {activeWorkout.dayName && (
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {activeWorkout.dayName}
-              </p>
-            )}
+        <div className="max-w-lg mx-auto">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h1 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {activeWorkout.planName || 'Freies Training'}
+              </h1>
+              {activeWorkout.dayName && (
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {activeWorkout.dayName}
+                </p>
+              )}
+            </div>
+            
+            {/* Timers */}
+            <div className="flex items-center gap-2">
+              {/* Elapsed Time */}
+              <div className={`flex items-center gap-1 px-3 py-1.5 rounded-lg ${
+                darkMode ? 'bg-dark-border' : 'bg-gray-200'
+              }`}>
+                <Clock size={16} className="text-primary" />
+                <span className={`font-mono text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {formatTime(elapsedTime)}
+                </span>
+              </div>
+              
+              {/* Rest Timer */}
+              <div 
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg cursor-pointer ${
+                  restRemaining > 0 && restRunning
+                    ? 'bg-primary animate-pulse'
+                    : darkMode ? 'bg-dark-border hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'
+                }`}
+                onClick={() => setShowRestSettings(true)}
+              >
+                <Timer size={16} className={restRemaining > 0 && restRunning ? 'text-white' : 'text-primary'} />
+                <span className={`font-mono text-sm ${restRemaining > 0 && restRunning ? 'text-white' : darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {formatTime(restRunning ? restRemaining : restTime)}
+                </span>
+              </div>
+              
+              {/* Rest Timer Controls */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => restRunning ? stopRestTimer() : startRestTimer()}
+                  className={`p-1.5 rounded-full ${darkMode ? 'hover:bg-dark-border' : 'hover:bg-gray-200'}`}
+                >
+                  {restRunning ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button
+                  onClick={resetRestTimer}
+                  className={`p-1.5 rounded-full ${darkMode ? 'hover:bg-dark-border' : 'hover:bg-gray-200'}`}
+                >
+                  <RotateCcw size={14} />
+                </button>
+              </div>
+            </div>
           </div>
-          <WorkoutTimer />
         </div>
       </div>
 
       {/* Exercises List */}
-      <div className="p-4 space-y-4">
+      <div className="p-4 max-w-lg mx-auto space-y-4">
         {activeWorkout.exercises.map((exercise) => (
           <div
             key={exercise.id}
@@ -292,7 +491,7 @@ export function TrainingPage() {
                   {exercise.exerciseName}
                 </h3>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {exercise.sets.length} Sätze {exercise.gadget && `• ${exercise.gadget}`}
+                  {exercise.sets.filter(s => s.completed).length}/{exercise.sets.length} Sätze {exercise.gadget && `• ${exercise.gadget}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -378,7 +577,7 @@ export function TrainingPage() {
                         {set.weight ? `${set.weight}kg` : '-'}
                       </button>
                       <button
-                        onClick={() => updateSet(exercise.id, set.id, { completed: !set.completed })}
+                        onClick={() => handleSetComplete(exercise.id, set.id, !set.completed)}
                         className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
                           set.completed
                             ? 'bg-green-500 text-white'
@@ -487,7 +686,7 @@ export function TrainingPage() {
             <button
               onClick={() => {
                 setEditValue('');
-                saveEdit();
+                saveEdit('');
               }}
               className={`w-full p-3 rounded-lg text-left ${
                 !editValue
@@ -535,6 +734,37 @@ export function TrainingPage() {
         )}
       </Modal>
 
+      {/* Rest Timer Settings Modal */}
+      <Modal
+        isOpen={showRestSettings}
+        onClose={() => setShowRestSettings(false)}
+        title="Pausenzeit einstellen"
+      >
+        <div className="grid grid-cols-2 gap-3">
+          {restOptions.map(seconds => (
+            <button
+              key={seconds}
+              onClick={() => {
+                setRestTime(seconds);
+                if (!restRunning) {
+                  setRestRemaining(seconds);
+                }
+                setShowRestSettings(false);
+              }}
+              className={`p-4 rounded-lg font-semibold transition-colors ${
+                restTime === seconds
+                  ? 'bg-primary text-white'
+                  : darkMode
+                  ? 'bg-dark-border hover:bg-gray-700 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+              }`}
+            >
+              {formatTime(seconds)}
+            </button>
+          ))}
+        </div>
+      </Modal>
+
       {/* End Workout Confirmation */}
       <Modal
         isOpen={showEndWorkout}
@@ -563,6 +793,8 @@ export function TrainingPage() {
             onClick={() => {
               cancelWorkout();
               setShowEndWorkout(false);
+              startTimeRef.current = null;
+              elapsedRef.current = 0;
             }}
             className="text-red-500"
           >
@@ -575,14 +807,14 @@ export function TrainingPage() {
       <Modal
         isOpen={workoutSummary !== null}
         onClose={handleCloseSummary}
-        title="Training abgeschlossen! 🎉"
+        title="Training abgeschlossen! ��"
       >
         {workoutSummary && (
           <div className="space-y-4">
             <div className={`p-4 rounded-lg ${
               darkMode ? 'bg-dark-border' : 'bg-gray-100'
             }`}>
-              <div className="grid grid-cols-2 gap-4 text-center">
+              <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {workoutSummary.duration}
@@ -599,10 +831,18 @@ export function TrainingPage() {
                     Übungen
                   </p>
                 </div>
+                <div>
+                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {workoutSummary.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)}
+                  </p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Sätze
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {workoutSummary.exercises.map(ex => (
                 <div
                   key={ex.id}
@@ -614,7 +854,7 @@ export function TrainingPage() {
                     {ex.exerciseName}
                   </p>
                   <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {ex.sets.length} Sätze • {ex.sets.reduce((acc, s) => acc + s.reps, 0)} Wdh.
+                    {ex.sets.filter(s => s.completed).length} Sätze • {ex.sets.filter(s => s.completed).reduce((acc, s) => acc + s.reps, 0)} Wdh.
                   </p>
                 </div>
               ))}

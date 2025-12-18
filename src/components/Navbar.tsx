@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Dumbbell, Calendar, User } from 'lucide-react';
+import { Home, Dumbbell, Calendar, Settings } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 export function Navbar() {
@@ -9,7 +9,7 @@ export function Navbar() {
     { to: '/', icon: Home, label: 'Home' },
     { to: '/training', icon: Dumbbell, label: 'Training' },
     { to: '/calendar', icon: Calendar, label: 'Kalender' },
-    { to: '/profile', icon: User, label: 'Profil' }
+    { to: '/settings', icon: Settings, label: 'Einstellungen' }
   ];
 
   return (

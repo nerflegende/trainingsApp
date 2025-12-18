@@ -87,6 +87,9 @@ class ApiClient {
     bodyHeight: number;
     weeklyGoal: number;
     darkMode: boolean;
+    age: number;
+    stepGoal: number;
+    palValue: number;
   }>) {
     return this.request<{ success: boolean }>('/auth/me', {
       method: 'PATCH',
@@ -158,7 +161,10 @@ export interface UserResponse {
   email: string;
   bodyWeight?: number;
   bodyHeight?: number;
+  age?: number;
   weeklyGoal: number;
+  stepGoal?: number;
+  palValue?: number;
   darkMode: boolean;
   createdAt: string;
 }

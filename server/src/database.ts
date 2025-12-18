@@ -30,7 +30,10 @@ export function initializeDatabase() {
       password_hash TEXT NOT NULL,
       body_weight REAL,
       body_height REAL,
+      age INTEGER,
       weekly_goal INTEGER DEFAULT 3,
+      step_goal INTEGER DEFAULT 10000,
+      pal_value REAL DEFAULT 1.4,
       dark_mode INTEGER DEFAULT 1,
       created_at TEXT NOT NULL
     );
@@ -76,6 +79,17 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_body_measurements_user_id ON body_measurements(user_id);
     CREATE INDEX IF NOT EXISTS idx_body_measurements_date ON body_measurements(date);
   `);
+
+  // Add new columns if they don't exist (for migration)
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN age INTEGER`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN step_goal INTEGER DEFAULT 10000`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN pal_value REAL DEFAULT 1.4`);
+  } catch { /* Column may already exist */ }
 
   console.log('Database initialized successfully');
 }
