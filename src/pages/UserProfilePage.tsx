@@ -301,7 +301,7 @@ export function UserProfilePage() {
         const comparison = getComparisonData();
 
         const renderTrendIcon = (diff: number | null | undefined, invertColor = false) => {
-          if (diff === null || diff === undefined) return null;
+          if (diff == null) return null;
           const isPositive = invertColor ? diff < 0 : diff > 0;
           const isNegative = invertColor ? diff > 0 : diff < 0;
           if (isPositive) return <TrendingUp size={16} className="text-green-500" />;

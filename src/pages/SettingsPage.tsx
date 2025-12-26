@@ -12,15 +12,10 @@ import {
   Moon,
   ExternalLink,
   Github,
-  Edit2,
-  History,
-  Eye,
   Copy
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
-import { useAuth } from '../contexts/AuthContext';
-import { api } from '../utils/api';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
@@ -34,8 +29,7 @@ type ColorScheme = 'red' | 'blue' | 'purple' | 'orange' | 'green';
 export function SettingsPage() {
   const location = useLocation();
   const { darkMode, toggleDarkMode, colorScheme, setColorScheme } = useTheme();
-  const { userData } = useAuth();
-  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget, updateCustomExercise, deleteCustomExercise, updateCustomGadget, deleteCustomGadget } = useWorkout();
+  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget } = useWorkout();
 
   // Get initial tab from location state
   const getInitialTab = (): TabType => {
@@ -53,38 +47,6 @@ export function SettingsPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showAddGadget, setShowAddGadget] = useState(false);
-  const [showPlanPreview, setShowPlanPreview] = useState<typeof defaultWorkoutPlans[0] | null>(null);
-  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
-  const [editingGadget, setEditingGadget] = useState<Gadget | null>(null);
-  const [showExerciseHistory, setShowExerciseHistory] = useState<{ id: string; name: string } | null>(null);
-  const [exerciseHistory, setExerciseHistory] = useState<{ date: string; sets: { reps: number; weight?: number }[] }[]>([]);
-  const [confirmDeleteExercise, setConfirmDeleteExercise] = useState<string | null>(null);
-  const [confirmDeleteGadget, setConfirmDeleteGadget] = useState<string | null>(null);
-  
-  // For unused variables warning suppression
-  void api;
-  void userData;
-  void showPlanPreview;
-  void setShowPlanPreview;
-  void editingExercise;
-  void setEditingExercise;
-  void editingGadget;
-  void setEditingGadget;
-  void showExerciseHistory;
-  void setShowExerciseHistory;
-  void exerciseHistory;
-  void setExerciseHistory;
-  void confirmDeleteExercise;
-  void setConfirmDeleteExercise;
-  void confirmDeleteGadget;
-  void setConfirmDeleteGadget;
-  void updateCustomExercise;
-  void deleteCustomExercise;
-  void updateCustomGadget;
-  void deleteCustomGadget;
-  void Edit2;
-  void History;
-  void Eye;
   
   // Custom exercise state
   const [newExerciseName, setNewExerciseName] = useState('');
