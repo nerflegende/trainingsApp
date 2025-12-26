@@ -1,18 +1,21 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Dumbbell, Scale } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, Scale, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/Button';
 import type { WorkoutRecord, BodyMeasurement } from '../types';
 
 export function CalendarPage() {
   const { darkMode } = useTheme();
-  const { getWorkoutsForDate, getMeasurementsForDate, workoutHistory, bodyMeasurements } = useWorkout();
+  const { getWorkoutsForDate, getMeasurementsForDate, workoutHistory, bodyMeasurements, deleteWorkout } = useWorkout();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedWorkouts, setSelectedWorkouts] = useState<WorkoutRecord[]>([]);
   const [selectedMeasurements, setSelectedMeasurements] = useState<BodyMeasurement[]>([]);
+  const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -214,7 +217,10 @@ export function CalendarPage() {
       {/* Day Details Modal */}
       <Modal
         isOpen={selectedDate !== null}
-        onClose={() => setSelectedDate(null)}
+        onClose={() => {
+          setSelectedDate(null);
+          setExpandedWorkout(null);
+        }}
         title={selectedDate?.toLocaleDateString('de-DE', {
           weekday: 'long',
           day: 'numeric',
@@ -229,41 +235,144 @@ export function CalendarPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Dumbbell size={20} className="text-primary" />
                 <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Training
+                  Training ({selectedWorkouts.length})
                 </h3>
               </div>
               {selectedWorkouts.map(workout => (
                 <div
                   key={workout.id}
-                  className={`p-4 rounded-lg mb-2 ${
+                  className={`rounded-lg mb-2 overflow-hidden ${
                     darkMode ? 'bg-dark-border' : 'bg-gray-100'
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {workout.planName || 'Freies Training'}
-                      </h4>
-                      {workout.dayName && (
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                          {workout.dayName}
-                        </p>
+                  {/* Workout Header */}
+                  <div 
+                    className={`p-4 cursor-pointer ${
+                      darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+                    }`}
+                    onClick={() => setExpandedWorkout(
+                      expandedWorkout === workout.id ? null : workout.id
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {workout.planName || 'Freies Training'}
+                        </h4>
+                        {workout.dayName && (
+                          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {workout.dayName}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {workout.duration} Min.
+                        </span>
+                        {expandedWorkout === workout.id ? (
+                          <ChevronUp size={18} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                        ) : (
+                          <ChevronDown size={18} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Summary Stats */}
+                    <div className="flex gap-4 mt-2 text-sm">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        {workout.exercises.length} Übungen
+                      </span>
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        {workout.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)} Sätze
+                      </span>
+                      {workout.totalWeight && workout.totalWeight > 0 && (
+                        <span className="text-primary font-medium">
+                          {workout.totalWeight.toLocaleString()} kg
+                        </span>
                       )}
                     </div>
-                    <span className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {workout.duration} Min.
-                    </span>
                   </div>
-                  <div className="space-y-1">
-                    {workout.exercises.map(ex => (
-                      <div
-                        key={ex.id}
-                        className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-                      >
-                        {ex.exerciseName} - {ex.sets.length} Sätze
+
+                  {/* Expanded Details */}
+                  {expandedWorkout === workout.id && (
+                    <div className={`border-t ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}>
+                      <div className="p-4 space-y-3">
+                        {workout.exercises.map(ex => (
+                          <div
+                            key={ex.id}
+                            className={`p-3 rounded ${darkMode ? 'bg-dark-card' : 'bg-white'}`}
+                          >
+                            <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {ex.exerciseName}
+                            </p>
+                            {ex.gadget && (
+                              <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                                {ex.gadget}
+                              </p>
+                            )}
+                            <div className="mt-2 space-y-1">
+                              {ex.sets.filter(s => s.completed).map(set => (
+                                <div
+                                  key={set.id}
+                                  className={`text-sm flex justify-between ${
+                                    darkMode ? 'text-gray-300' : 'text-gray-700'
+                                  }`}
+                                >
+                                  <span>Satz {set.setNumber}</span>
+                                  <span>
+                                    {set.reps} Wdh.
+                                    {set.weight && ` × ${set.weight}kg`}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+
+                      {/* Delete Button */}
+                      <div className="p-4 pt-0">
+                        {confirmDelete === workout.id ? (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              fullWidth
+                              onClick={() => setConfirmDelete(null)}
+                            >
+                              Abbrechen
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              fullWidth
+                              onClick={async () => {
+                                await deleteWorkout(workout.id);
+                                setSelectedWorkouts(prev => prev.filter(w => w.id !== workout.id));
+                                setConfirmDelete(null);
+                                if (selectedWorkouts.length <= 1 && selectedMeasurements.length === 0) {
+                                  setSelectedDate(null);
+                                }
+                              }}
+                            >
+                              Löschen bestätigen
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            fullWidth
+                            onClick={() => setConfirmDelete(workout.id)}
+                            className="text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 size={16} />
+                            Training löschen
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -285,22 +394,50 @@ export function CalendarPage() {
                     darkMode ? 'bg-dark-border' : 'bg-gray-100'
                   }`}
                 >
-                  {measurement.weight && (
-                    <div className={`flex justify-between ${
-                      darkMode ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                      <span>Gewicht</span>
-                      <span className="font-medium">{measurement.weight} kg</span>
-                    </div>
-                  )}
-                  {measurement.height && (
-                    <div className={`flex justify-between ${
-                      darkMode ? 'text-gray-300' : 'text-gray-700'
-                    }`}>
-                      <span>Größe</span>
-                      <span className="font-medium">{measurement.height} cm</span>
-                    </div>
-                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    {measurement.weight && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Gewicht</span>
+                        <p className="font-medium">{measurement.weight} kg</p>
+                      </div>
+                    )}
+                    {measurement.height && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Größe</span>
+                        <p className="font-medium">{measurement.height} cm</p>
+                      </div>
+                    )}
+                    {measurement.bodyFat && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Körperfett</span>
+                        <p className="font-medium">{measurement.bodyFat} %</p>
+                      </div>
+                    )}
+                    {measurement.chest && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Brust</span>
+                        <p className="font-medium">{measurement.chest} cm</p>
+                      </div>
+                    )}
+                    {measurement.arms && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Arme</span>
+                        <p className="font-medium">{measurement.arms} cm</p>
+                      </div>
+                    )}
+                    {measurement.waist && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Taille</span>
+                        <p className="font-medium">{measurement.waist} cm</p>
+                      </div>
+                    )}
+                    {measurement.legs && (
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        <span className="text-sm">Beine</span>
+                        <p className="font-medium">{measurement.legs} cm</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

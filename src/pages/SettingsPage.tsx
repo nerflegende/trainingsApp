@@ -12,10 +12,14 @@ import {
   Moon,
   ExternalLink,
   Github,
-  Copy
+  Edit2,
+  History,
+  Eye
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../utils/api';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
@@ -24,11 +28,13 @@ import type { WorkoutDay, PlannedExercise, Exercise, Gadget } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 type TabType = 'plans' | 'exercises' | 'gadgets' | 'settings';
+type ColorScheme = 'red' | 'blue' | 'purple' | 'orange' | 'green';
 
 export function SettingsPage() {
   const location = useLocation();
-  const { darkMode, toggleDarkMode } = useTheme();
-  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget } = useWorkout();
+  const { darkMode, toggleDarkMode, colorScheme, setColorScheme } = useTheme();
+  const { userData } = useAuth();
+  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget, updateCustomExercise, deleteCustomExercise, updateCustomGadget, deleteCustomGadget } = useWorkout();
 
   // Get initial tab from location state
   const getInitialTab = (): TabType => {
@@ -46,6 +52,13 @@ export function SettingsPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showAddGadget, setShowAddGadget] = useState(false);
+  const [showPlanPreview, setShowPlanPreview] = useState<typeof defaultWorkoutPlans[0] | null>(null);
+  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [editingGadget, setEditingGadget] = useState<Gadget | null>(null);
+  const [showExerciseHistory, setShowExerciseHistory] = useState<{ id: string; name: string } | null>(null);
+  const [exerciseHistory, setExerciseHistory] = useState<{ date: string; sets: { reps: number; weight?: number }[] }[]>([]);
+  const [confirmDeleteExercise, setConfirmDeleteExercise] = useState<string | null>(null);
+  const [confirmDeleteGadget, setConfirmDeleteGadget] = useState<string | null>(null);
   
   // Custom exercise state
   const [newExerciseName, setNewExerciseName] = useState('');
@@ -392,6 +405,14 @@ export function SettingsPage() {
         );
 
       case 'settings':
+        const colorSchemes: { id: ColorScheme; name: string; color: string }[] = [
+          { id: 'red', name: 'Rot', color: '#dc2626' },
+          { id: 'blue', name: 'Blau', color: '#1e40af' },
+          { id: 'purple', name: 'Lila', color: '#7c3aed' },
+          { id: 'orange', name: 'Orange', color: '#c2410c' },
+          { id: 'green', name: 'Grün', color: '#15803d' }
+        ];
+
         return (
           <div className="space-y-4">
             {/* Dark Mode Toggle */}
@@ -414,6 +435,41 @@ export function SettingsPage() {
                   darkMode ? 'translate-x-8' : 'translate-x-1'
                 }`} />
               </button>
+            </div>
+
+            {/* Color Scheme */}
+            <div className={`p-4 rounded-xl ${
+              darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
+            }`}>
+              <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Farbschema
+              </h3>
+              <div className="grid grid-cols-5 gap-3">
+                {colorSchemes.map(scheme => (
+                  <button
+                    key={scheme.id}
+                    onClick={() => setColorScheme(scheme.id)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all ${
+                      colorScheme === scheme.id
+                        ? 'ring-2 ring-offset-2 ring-offset-dark-card'
+                        : darkMode
+                        ? 'hover:bg-dark-border'
+                        : 'hover:bg-gray-100'
+                    }`}
+                    style={{ 
+                      ringColor: colorScheme === scheme.id ? scheme.color : undefined 
+                    }}
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-full"
+                      style={{ backgroundColor: scheme.color }}
+                    />
+                    <span className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      {scheme.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Links */}

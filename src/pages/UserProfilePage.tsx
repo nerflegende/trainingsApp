@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -15,7 +15,10 @@ import {
   Calendar,
   Edit2,
   X,
-  Check
+  Check,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -25,6 +28,18 @@ import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 
 type TabType = 'info' | 'body' | 'goals' | 'calories';
+
+// Helper to calculate age from birthdate
+function calculateAge(birthdate: string): number {
+  const birth = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 export function UserProfilePage() {
   const location = useLocation();
@@ -49,10 +64,23 @@ export function UserProfilePage() {
   // Edit states
   const [newWeight, setNewWeight] = useState('');
   const [newHeight, setNewHeight] = useState('');
-  const [newAge, setNewAge] = useState(userData?.age?.toString() || '');
+  const [newBodyFat, setNewBodyFat] = useState('');
+  const [newChest, setNewChest] = useState('');
+  const [newArms, setNewArms] = useState('');
+  const [newWaist, setNewWaist] = useState('');
+  const [newLegs, setNewLegs] = useState('');
+  const [newBirthdate, setNewBirthdate] = useState(userData?.birthdate || '');
   const [newWeeklyGoal, setNewWeeklyGoal] = useState(userData?.weeklyGoal || 3);
   const [newStepGoal, setNewStepGoal] = useState(userData?.stepGoal?.toString() || '10000');
   const [newPalValue, setNewPalValue] = useState(userData?.palValue || 1.4);
+
+  // Calculate user age from birthdate
+  const userAge = useMemo(() => {
+    if (userData?.birthdate) {
+      return calculateAge(userData.birthdate);
+    }
+    return null;
+  }, [userData?.birthdate]);
 
   const handleLogout = async () => {
     await logout();
@@ -62,11 +90,21 @@ export function UserProfilePage() {
   const handleAddMeasurement = async () => {
     const weight = newWeight ? parseFloat(newWeight) : undefined;
     const height = newHeight ? parseFloat(newHeight) : undefined;
+    const bodyFat = newBodyFat ? parseFloat(newBodyFat) : undefined;
+    const chest = newChest ? parseFloat(newChest) : undefined;
+    const arms = newArms ? parseFloat(newArms) : undefined;
+    const waist = newWaist ? parseFloat(newWaist) : undefined;
+    const legs = newLegs ? parseFloat(newLegs) : undefined;
     
-    if (weight || height) {
-      await addBodyMeasurement(weight, height);
+    if (weight || height || bodyFat || chest || arms || waist || legs) {
+      await addBodyMeasurement({ weight, height, bodyFat, chest, arms, waist, legs });
       setNewWeight('');
       setNewHeight('');
+      setNewBodyFat('');
+      setNewChest('');
+      setNewArms('');
+      setNewWaist('');
+      setNewLegs('');
       setShowAddMeasurement(false);
     }
   };
@@ -75,7 +113,7 @@ export function UserProfilePage() {
     await updateUserData({
       weeklyGoal: newWeeklyGoal,
       stepGoal: parseInt(newStepGoal) || 10000,
-      age: parseInt(newAge) || undefined,
+      birthdate: newBirthdate || undefined,
       palValue: newPalValue
     });
     setEditingField(null);
@@ -85,7 +123,7 @@ export function UserProfilePage() {
   const calculateBMR = () => {
     const weight = bodyMeasurements[0]?.weight || userData?.bodyWeight;
     const height = bodyMeasurements[0]?.height || userData?.bodyHeight;
-    const age = userData?.age;
+    const age = userAge;
     const gender = userData?.gender;
     
     if (!weight || !height || !age || !gender) return null;
@@ -165,16 +203,27 @@ export function UserProfilePage() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <User size={20} className="text-primary" />
+                  <div className="flex-1">
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Geschlecht</p>
+                    <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {userData?.gender === 'male' ? '♂️ Männlich' : userData?.gender === 'female' ? '♀️ Weiblich' : 'Nicht angegeben'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
                   <Calendar size={20} className="text-primary" />
                   <div className="flex-1">
                     <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Alter</p>
-                    {editingField === 'age' ? (
+                    {editingField === 'birthdate' ? (
                       <div className="flex gap-2 items-center">
                         <input
-                          type="number"
-                          value={newAge}
-                          onChange={(e) => setNewAge(e.target.value)}
-                          className={`w-20 px-2 py-1 rounded ${
+                          type="date"
+                          value={newBirthdate}
+                          onChange={(e) => setNewBirthdate(e.target.value)}
+                          max={new Date().toISOString().split('T')[0]}
+                          className={`flex-1 px-2 py-1 rounded ${
                             darkMode ? 'bg-dark-border text-white' : 'bg-gray-100 text-gray-900'
                           }`}
                         />
@@ -188,11 +237,11 @@ export function UserProfilePage() {
                     ) : (
                       <div className="flex items-center gap-2">
                         <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {userData?.age || 'Nicht angegeben'} {userData?.age && 'Jahre'}
+                          {userAge ? `${userAge} Jahre` : 'Nicht angegeben'}
                         </p>
                         <button onClick={() => {
-                          setNewAge(userData?.age?.toString() || '');
-                          setEditingField('age');
+                          setNewBirthdate(userData?.birthdate || '');
+                          setEditingField('birthdate');
                         }}>
                           <Edit2 size={14} className={darkMode ? 'text-gray-400' : 'text-gray-500'} />
                         </button>
@@ -226,6 +275,40 @@ export function UserProfilePage() {
         );
 
       case 'body':
+        // Get comparison data for body measurements
+        const getComparisonData = () => {
+          if (bodyMeasurements.length < 2) return null;
+          
+          const latest = bodyMeasurements[0];
+          const oldest = bodyMeasurements[bodyMeasurements.length - 1];
+          
+          const compare = (current?: number, initial?: number) => {
+            if (!current || !initial) return null;
+            const diff = current - initial;
+            return { current, initial, diff };
+          };
+
+          return {
+            weight: compare(latest.weight, oldest.weight),
+            bodyFat: compare(latest.bodyFat, oldest.bodyFat),
+            chest: compare(latest.chest, oldest.chest),
+            arms: compare(latest.arms, oldest.arms),
+            waist: compare(latest.waist, oldest.waist),
+            legs: compare(latest.legs, oldest.legs)
+          };
+        };
+
+        const comparison = getComparisonData();
+
+        const renderTrendIcon = (diff: number | null | undefined, invertColor = false) => {
+          if (diff === null || diff === undefined) return null;
+          const isPositive = invertColor ? diff < 0 : diff > 0;
+          const isNegative = invertColor ? diff > 0 : diff < 0;
+          if (isPositive) return <TrendingUp size={16} className="text-green-500" />;
+          if (isNegative) return <TrendingDown size={16} className="text-red-500" />;
+          return <Minus size={16} className="text-gray-400" />;
+        };
+
         return (
           <div className="space-y-4">
             <Button fullWidth onClick={() => setShowAddMeasurement(true)}>
@@ -259,8 +342,155 @@ export function UserProfilePage() {
                     {bodyMeasurements[0]?.height || userData?.bodyHeight || '-'} cm
                   </p>
                 </div>
+                {bodyMeasurements[0]?.bodyFat && (
+                  <div className={`p-4 rounded-lg col-span-2 ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Körperfett</p>
+                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {bodyMeasurements[0].bodyFat} %
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* Body circumferences */}
+              {(bodyMeasurements[0]?.chest || bodyMeasurements[0]?.arms || bodyMeasurements[0]?.waist || bodyMeasurements[0]?.legs) && (
+                <>
+                  <h4 className={`font-medium mt-4 mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Umfänge (cm)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {bodyMeasurements[0]?.chest && (
+                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Brust</p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {bodyMeasurements[0].chest}
+                        </p>
+                      </div>
+                    )}
+                    {bodyMeasurements[0]?.arms && (
+                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Arme</p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {bodyMeasurements[0].arms}
+                        </p>
+                      </div>
+                    )}
+                    {bodyMeasurements[0]?.waist && (
+                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Taille</p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {bodyMeasurements[0].waist}
+                        </p>
+                      </div>
+                    )}
+                    {bodyMeasurements[0]?.legs && (
+                      <div className={`p-3 rounded-lg ${darkMode ? 'bg-dark-border' : 'bg-gray-100'}`}>
+                        <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Beine</p>
+                        <p className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {bodyMeasurements[0].legs}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Comparison - Before/After */}
+            {comparison && (
+              <div className={`p-4 rounded-xl ${
+                darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
+              }`}>
+                <h3 className={`font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Vergleich (Erste → Letzte Messung)
+                </h3>
+                <div className="space-y-3">
+                  {comparison.weight && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Gewicht</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.weight.initial} → {comparison.weight.current} kg
+                        </span>
+                        <span className={comparison.weight.diff < 0 ? 'text-green-500' : comparison.weight.diff > 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.weight.diff > 0 ? '+' : ''}{comparison.weight.diff.toFixed(1)} kg)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {comparison.bodyFat && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Körperfett</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.bodyFat.initial} → {comparison.bodyFat.current} %
+                        </span>
+                        <span className={comparison.bodyFat.diff < 0 ? 'text-green-500' : comparison.bodyFat.diff > 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.bodyFat.diff > 0 ? '+' : ''}{comparison.bodyFat.diff.toFixed(1)} %)
+                        </span>
+                        {renderTrendIcon(comparison.bodyFat.diff, true)}
+                      </div>
+                    </div>
+                  )}
+                  {comparison.chest && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Brust</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.chest.initial} → {comparison.chest.current} cm
+                        </span>
+                        <span className={comparison.chest.diff > 0 ? 'text-green-500' : comparison.chest.diff < 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.chest.diff > 0 ? '+' : ''}{comparison.chest.diff.toFixed(1)} cm)
+                        </span>
+                        {renderTrendIcon(comparison.chest.diff)}
+                      </div>
+                    </div>
+                  )}
+                  {comparison.arms && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Arme</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.arms.initial} → {comparison.arms.current} cm
+                        </span>
+                        <span className={comparison.arms.diff > 0 ? 'text-green-500' : comparison.arms.diff < 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.arms.diff > 0 ? '+' : ''}{comparison.arms.diff.toFixed(1)} cm)
+                        </span>
+                        {renderTrendIcon(comparison.arms.diff)}
+                      </div>
+                    </div>
+                  )}
+                  {comparison.waist && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Taille</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.waist.initial} → {comparison.waist.current} cm
+                        </span>
+                        <span className={comparison.waist.diff < 0 ? 'text-green-500' : comparison.waist.diff > 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.waist.diff > 0 ? '+' : ''}{comparison.waist.diff.toFixed(1)} cm)
+                        </span>
+                        {renderTrendIcon(comparison.waist.diff, true)}
+                      </div>
+                    </div>
+                  )}
+                  {comparison.legs && (
+                    <div className="flex justify-between items-center">
+                      <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>Beine</span>
+                      <div className="flex items-center gap-2">
+                        <span className={darkMode ? 'text-white' : 'text-gray-900'}>
+                          {comparison.legs.initial} → {comparison.legs.current} cm
+                        </span>
+                        <span className={comparison.legs.diff > 0 ? 'text-green-500' : comparison.legs.diff < 0 ? 'text-red-500' : 'text-gray-500'}>
+                          ({comparison.legs.diff > 0 ? '+' : ''}{comparison.legs.diff.toFixed(1)} cm)
+                        </span>
+                        {renderTrendIcon(comparison.legs.diff)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Measurement History */}
             {bodyMeasurements.length > 0 && (
@@ -281,10 +511,13 @@ export function UserProfilePage() {
                       <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
                         {new Date(m.date).toLocaleDateString('de-DE')}
                       </span>
-                      <span className={darkMode ? 'text-white' : 'text-gray-900'}>
-                        {m.weight && `${m.weight} kg`}
-                        {m.weight && m.height && ' • '}
-                        {m.height && `${m.height} cm`}
+                      <span className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {m.weight && `${m.weight}kg`}
+                        {m.bodyFat && ` • ${m.bodyFat}%`}
+                        {m.chest && ` • B:${m.chest}`}
+                        {m.arms && ` • A:${m.arms}`}
+                        {m.waist && ` • T:${m.waist}`}
+                        {m.legs && ` • L:${m.legs}`}
                       </span>
                     </div>
                   ))}
@@ -559,7 +792,7 @@ export function UserProfilePage() {
         onClose={() => setShowAddMeasurement(false)}
         title="Körpermaße eintragen"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <Input
             label="Gewicht (kg)"
             type="number"
@@ -575,6 +808,53 @@ export function UserProfilePage() {
             onChange={(e) => setNewHeight(e.target.value)}
             placeholder="z.B. 180"
           />
+          <Input
+            label="Körperfett (%)"
+            type="number"
+            value={newBodyFat}
+            onChange={(e) => setNewBodyFat(e.target.value)}
+            placeholder="z.B. 15"
+            step="0.1"
+          />
+          <div className={`pt-2 border-t ${darkMode ? 'border-dark-border' : 'border-light-border'}`}>
+            <p className={`text-sm font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              Umfänge (cm)
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Brust"
+                type="number"
+                value={newChest}
+                onChange={(e) => setNewChest(e.target.value)}
+                placeholder="z.B. 100"
+                step="0.5"
+              />
+              <Input
+                label="Arme"
+                type="number"
+                value={newArms}
+                onChange={(e) => setNewArms(e.target.value)}
+                placeholder="z.B. 35"
+                step="0.5"
+              />
+              <Input
+                label="Taille"
+                type="number"
+                value={newWaist}
+                onChange={(e) => setNewWaist(e.target.value)}
+                placeholder="z.B. 80"
+                step="0.5"
+              />
+              <Input
+                label="Beine"
+                type="number"
+                value={newLegs}
+                onChange={(e) => setNewLegs(e.target.value)}
+                placeholder="z.B. 55"
+                step="0.5"
+              />
+            </div>
+          </div>
           <Button fullWidth onClick={handleAddMeasurement}>
             <Save size={18} />
             Speichern
