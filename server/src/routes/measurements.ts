@@ -5,6 +5,19 @@ import { authMiddleware, AuthRequest } from '../auth.js';
 
 const router = Router();
 
+interface MeasurementRow {
+  id: string;
+  user_id: string;
+  date: string;
+  weight: number | null;
+  height: number | null;
+  body_fat: number | null;
+  chest: number | null;
+  arms: number | null;
+  waist: number | null;
+  legs: number | null;
+}
+
 // Get body measurements
 router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
   try {
@@ -12,20 +25,19 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
       SELECT * FROM body_measurements 
       WHERE user_id = ? 
       ORDER BY date DESC
-    `).all(req.userId) as {
-      id: string;
-      user_id: string;
-      date: string;
-      weight: number | null;
-      height: number | null;
-    }[];
+    `).all(req.userId) as MeasurementRow[];
 
     res.json(measurements.map(m => ({
       id: m.id,
       userId: m.user_id,
       date: m.date,
       weight: m.weight,
-      height: m.height
+      height: m.height,
+      bodyFat: m.body_fat,
+      chest: m.chest,
+      arms: m.arms,
+      waist: m.waist,
+      legs: m.legs
     })));
   } catch (error) {
     console.error('Get measurements error:', error);
@@ -36,10 +48,11 @@ router.get('/', authMiddleware, (req: AuthRequest, res: Response) => {
 // Add measurement
 router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
   try {
-    const { weight, height } = req.body;
+    const { weight, height, bodyFat, chest, arms, waist, legs } = req.body;
 
-    if (weight === undefined && height === undefined) {
-      res.status(400).json({ error: 'Gewicht oder Größe erforderlich' });
+    if (weight === undefined && height === undefined && bodyFat === undefined && 
+        chest === undefined && arms === undefined && waist === undefined && legs === undefined) {
+      res.status(400).json({ error: 'Mindestens ein Wert erforderlich' });
       return;
     }
 
@@ -47,16 +60,21 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
     const date = new Date().toISOString();
 
     db.prepare(`
-      INSERT INTO body_measurements (id, user_id, date, weight, height)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(measurementId, req.userId, date, weight || null, height || null);
+      INSERT INTO body_measurements (id, user_id, date, weight, height, body_fat, chest, arms, waist, legs)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(measurementId, req.userId, date, weight || null, height || null, bodyFat || null, chest || null, arms || null, waist || null, legs || null);
 
     res.status(201).json({
       id: measurementId,
       userId: req.userId,
       date,
       weight,
-      height
+      height,
+      bodyFat,
+      chest,
+      arms,
+      waist,
+      legs
     });
   } catch (error) {
     console.error('Add measurement error:', error);

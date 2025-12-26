@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
 @theme {
+  /* Red theme (default) */
   --color-primary: #dc2626;
   --color-primary-dark: #991b1b;
   --color-primary-light: #ef4444;
+  
+  /* Dark/light base colors */
   --color-dark: #0a0a0a;
   --color-dark-card: #1a1a1a;
   --color-dark-border: #2a2a2a;
@@ -20,6 +23,42 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  
+  /* Default red theme */
+  --theme-primary: #dc2626;
+  --theme-primary-dark: #991b1b;
+  --theme-primary-light: #ef4444;
+}
+
+/* Color schemes */
+[data-theme="red"] {
+  --theme-primary: #dc2626;
+  --theme-primary-dark: #991b1b;
+  --theme-primary-light: #ef4444;
+}
+
+[data-theme="blue"] {
+  --theme-primary: #1e40af;
+  --theme-primary-dark: #1e3a8a;
+  --theme-primary-light: #3b82f6;
+}
+
+[data-theme="purple"] {
+  --theme-primary: #7c3aed;
+  --theme-primary-dark: #5b21b6;
+  --theme-primary-light: #8b5cf6;
+}
+
+[data-theme="orange"] {
+  --theme-primary: #c2410c;
+  --theme-primary-dark: #9a3412;
+  --theme-primary-light: #ea580c;
+}
+
+[data-theme="green"] {
+  --theme-primary: #15803d;
+  --theme-primary-dark: #166534;
+  --theme-primary-light: #22c55e;
 }
 
 body {
@@ -27,6 +66,17 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Override Tailwind primary color with CSS variable */
+.bg-primary { background-color: var(--theme-primary) !important; }
+.bg-primary\/10 { background-color: color-mix(in srgb, var(--theme-primary) 10%, transparent) !important; }
+.bg-primary\/20 { background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent) !important; }
+.text-primary { color: var(--theme-primary) !important; }
+.border-primary { border-color: var(--theme-primary) !important; }
+.ring-primary { --tw-ring-color: var(--theme-primary) !important; }
+.hover\:bg-primary:hover { background-color: var(--theme-primary) !important; }
+.hover\:text-primary:hover { color: var(--theme-primary) !important; }
+.hover\:border-primary:hover { border-color: var(--theme-primary) !important; }
 
 /* Custom scrollbar for dark mode */
 .dark ::-webkit-scrollbar {
@@ -38,10 +88,10 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #dc2626;
+  background: var(--theme-primary);
   border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #ef4444;
+  background: var(--theme-primary-light);
 }

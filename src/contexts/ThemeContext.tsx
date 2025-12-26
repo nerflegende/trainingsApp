@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
+type ColorScheme = 'red' | 'blue' | 'purple' | 'orange' | 'green';
+
 interface ThemeContextType {
   darkMode: boolean;
+  colorScheme: ColorScheme;
   toggleDarkMode: () => void;
   setDarkMode: (value: boolean) => void;
+  setColorScheme: (scheme: ColorScheme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -28,8 +32,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     return userData?.darkMode ?? true;
   };
+
+  const getInitialColorScheme = (): ColorScheme => {
+    const savedScheme = localStorage.getItem('colorScheme') as ColorScheme | null;
+    if (savedScheme && ['red', 'blue', 'purple', 'orange', 'green'].includes(savedScheme)) {
+      return savedScheme;
+    }
+    return (userData?.colorScheme as ColorScheme) ?? 'red';
+  };
   
   const [darkMode, setDarkModeState] = useState(getInitialDarkMode);
+  const [colorScheme, setColorSchemeState] = useState<ColorScheme>(getInitialColorScheme);
 
   useEffect(() => {
     // Apply dark mode class to document
@@ -40,6 +53,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.setItem('darkMode', String(darkMode));
   }, [darkMode]);
+
+  useEffect(() => {
+    // Apply color scheme to document
+    document.documentElement.setAttribute('data-theme', colorScheme);
+    localStorage.setItem('colorScheme', colorScheme);
+  }, [colorScheme]);
+
+  // Sync with user data when it changes
+  useEffect(() => {
+    if (userData?.colorScheme) {
+      setColorSchemeState(userData.colorScheme as ColorScheme);
+    }
+  }, [userData?.colorScheme]);
 
   const toggleDarkMode = () => {
     const newValue = !darkMode;
@@ -56,8 +82,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setColorScheme = (scheme: ColorScheme) => {
+    setColorSchemeState(scheme);
+    if (userData) {
+      updateUserData({ colorScheme: scheme });
+    }
+  };
+
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode, setDarkMode }}>
+    <ThemeContext.Provider value={{ darkMode, colorScheme, toggleDarkMode, setDarkMode, setColorScheme }}>
       {children}
     </ThemeContext.Provider>
   );

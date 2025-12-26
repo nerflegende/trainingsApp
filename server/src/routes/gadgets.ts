@@ -62,6 +62,52 @@ router.post('/', authMiddleware, (req: AuthRequest, res: Response) => {
   }
 });
 
+// Update a custom gadget (only by creator)
+router.patch('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    // Check if user owns this gadget
+    const gadget = db.prepare('SELECT created_by FROM custom_gadgets WHERE id = ?').get(id) as { created_by: string } | undefined;
+
+    if (!gadget) {
+      res.status(404).json({ error: 'Gadget nicht gefunden' });
+      return;
+    }
+
+    if (gadget.created_by !== req.userId) {
+      res.status(403).json({ error: 'Keine Berechtigung zum Bearbeiten dieses Gadgets' });
+      return;
+    }
+
+    const updates: string[] = [];
+    const values: (string | null)[] = [];
+
+    if (name !== undefined) {
+      updates.push('name = ?');
+      values.push(name);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      values.push(description);
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ error: 'Keine Änderungen angegeben' });
+      return;
+    }
+
+    values.push(id);
+    db.prepare(`UPDATE custom_gadgets SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update gadget error:', error);
+    res.status(500).json({ error: 'Fehler beim Aktualisieren des Gadgets' });
+  }
+});
+
 // Delete a custom gadget (only by creator)
 router.delete('/:id', authMiddleware, (req: AuthRequest, res: Response) => {
   try {

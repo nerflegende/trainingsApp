@@ -20,6 +20,7 @@ export function AuthPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [birthdate, setBirthdate] = useState('');
   const [bodyWeight, setBodyWeight] = useState('');
   const [bodyHeight, setBodyHeight] = useState('');
   const [weeklyGoal, setWeeklyGoal] = useState('3');
@@ -52,6 +53,7 @@ export function AuthPage() {
 
         await register(email, password, username, {
           gender,
+          birthdate: birthdate || undefined,
           bodyWeight: bodyWeight ? parseFloat(bodyWeight) : undefined,
           bodyHeight: bodyHeight ? parseFloat(bodyHeight) : undefined,
           weeklyGoal: parseInt(weeklyGoal),
@@ -178,6 +180,15 @@ export function AuthPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Birthdate */}
+              <Input
+                label="Geburtsdatum"
+                type="date"
+                value={birthdate}
+                onChange={(e) => setBirthdate(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <Input

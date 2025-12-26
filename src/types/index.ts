@@ -3,13 +3,14 @@ export interface User {
   username: string;
   email: string;
   gender?: 'male' | 'female';
+  birthdate?: string; // ISO date string
   bodyWeight?: number;
   bodyHeight?: number;
-  age?: number;
   weeklyGoal: number;
   stepGoal?: number;
   palValue?: number; // Physical Activity Level: 1.2-2.4
   darkMode: boolean;
+  colorScheme: 'red' | 'blue' | 'purple' | 'orange' | 'green';
   createdAt: Date;
 }
 
@@ -92,6 +93,11 @@ export interface BodyMeasurement {
   date: Date;
   weight?: number;
   height?: number;
+  bodyFat?: number;
+  chest?: number;
+  arms?: number;
+  waist?: number;
+  legs?: number;
 }
 
 export interface WorkoutRecord {
@@ -102,4 +108,5 @@ export interface WorkoutRecord {
   dayName?: string;
   exercises: WorkoutExercise[];
   duration: number; // in minutes
+  totalWeight?: number; // total weight lifted
 }

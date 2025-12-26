@@ -57,10 +57,12 @@ class ApiClient {
     password: string;
     username: string;
     gender?: 'male' | 'female';
+    birthdate?: string;
     bodyWeight?: number;
     bodyHeight?: number;
     weeklyGoal?: number;
     darkMode?: boolean;
+    colorScheme?: string;
   }) {
     const result = await this.request<{ token: string; user: UserResponse }>('/auth/register', {
       method: 'POST',
@@ -88,9 +90,11 @@ class ApiClient {
     bodyHeight: number;
     weeklyGoal: number;
     darkMode: boolean;
-    age: number;
+    birthdate: string;
+    gender: 'male' | 'female';
     stepGoal: number;
     palValue: number;
+    colorScheme: string;
   }>) {
     return this.request<{ success: boolean }>('/auth/me', {
       method: 'PATCH',
@@ -136,10 +140,17 @@ class ApiClient {
     dayName?: string;
     exercises: unknown[];
     duration: number;
+    totalWeight?: number;
   }) {
     return this.request<WorkoutResponse>('/workouts', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async deleteWorkout(workoutId: string) {
+    return this.request<{ success: boolean }>(`/workouts/${workoutId}`, {
+      method: 'DELETE',
     });
   }
 
@@ -148,7 +159,15 @@ class ApiClient {
     return this.request<MeasurementResponse[]>('/measurements');
   }
 
-  async addMeasurement(data: { weight?: number; height?: number }) {
+  async addMeasurement(data: { 
+    weight?: number; 
+    height?: number;
+    bodyFat?: number;
+    chest?: number;
+    arms?: number;
+    waist?: number;
+    legs?: number;
+  }) {
     return this.request<MeasurementResponse>('/measurements', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -167,6 +186,23 @@ class ApiClient {
     });
   }
 
+  async updateCustomExercise(id: string, data: { name?: string; description?: string; muscles?: string[]; gadgets?: string[] }) {
+    return this.request<{ success: boolean }>(`/exercises/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCustomExercise(id: string) {
+    return this.request<{ success: boolean }>(`/exercises/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getExerciseHistory(id: string, name: string) {
+    return this.request<ExerciseHistoryResponse[]>(`/exercises/${id}/history?name=${encodeURIComponent(name)}`);
+  }
+
   // Custom Gadgets
   async getCustomGadgets() {
     return this.request<GadgetResponse[]>('/gadgets');
@@ -178,6 +214,19 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  async updateCustomGadget(id: string, data: { name?: string; description?: string }) {
+    return this.request<{ success: boolean }>(`/gadgets/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteCustomGadget(id: string) {
+    return this.request<{ success: boolean }>(`/gadgets/${id}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 export interface UserResponse {
@@ -185,13 +234,14 @@ export interface UserResponse {
   username: string;
   email: string;
   gender?: 'male' | 'female';
+  birthdate?: string;
   bodyWeight?: number;
   bodyHeight?: number;
-  age?: number;
   weeklyGoal: number;
   stepGoal?: number;
   palValue?: number;
   darkMode: boolean;
+  colorScheme: string;
   createdAt: string;
 }
 
@@ -213,6 +263,7 @@ export interface WorkoutResponse {
   dayName?: string;
   exercises: unknown[];
   duration: number;
+  totalWeight?: number;
 }
 
 export interface MeasurementResponse {
@@ -221,6 +272,11 @@ export interface MeasurementResponse {
   date: string;
   weight?: number;
   height?: number;
+  bodyFat?: number;
+  chest?: number;
+  arms?: number;
+  waist?: number;
+  legs?: number;
 }
 
 export interface ExerciseResponse {
@@ -231,6 +287,11 @@ export interface ExerciseResponse {
   gadgets: string[];
   isCustom: boolean;
   userId?: string;
+}
+
+export interface ExerciseHistoryResponse {
+  date: string;
+  sets: { reps: number; weight?: number }[];
 }
 
 export interface GadgetResponse {

@@ -12,20 +12,21 @@ interface UserRow {
   email: string;
   password_hash: string;
   gender: string | null;
+  birthdate: string | null;
   body_weight: number | null;
   body_height: number | null;
-  age: number | null;
   weekly_goal: number;
   step_goal: number | null;
   pal_value: number | null;
   dark_mode: number;
+  color_scheme: string | null;
   created_at: string;
 }
 
 // Register
 router.post('/register', async (req, res: Response) => {
   try {
-    const { email, password, username, gender, bodyWeight, bodyHeight, weeklyGoal, darkMode } = req.body;
+    const { email, password, username, gender, birthdate, bodyWeight, bodyHeight, weeklyGoal, darkMode, colorScheme } = req.body;
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -48,9 +49,9 @@ router.post('/register', async (req, res: Response) => {
     const createdAt = new Date().toISOString();
 
     db.prepare(`
-      INSERT INTO users (id, username, email, password_hash, gender, body_weight, body_height, weekly_goal, dark_mode, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(userId, username, email, passwordHash, gender || null, bodyWeight || null, bodyHeight || null, weeklyGoal || 3, darkMode ? 1 : 0, createdAt);
+      INSERT INTO users (id, username, email, password_hash, gender, birthdate, body_weight, body_height, weekly_goal, dark_mode, color_scheme, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, username, email, passwordHash, gender || null, birthdate || null, bodyWeight || null, bodyHeight || null, weeklyGoal || 3, darkMode ? 1 : 0, colorScheme || 'red', createdAt);
 
     // Generate token
     const token = generateToken(userId);
@@ -62,13 +63,14 @@ router.post('/register', async (req, res: Response) => {
         username,
         email,
         gender: gender || null,
+        birthdate: birthdate || null,
         bodyWeight,
         bodyHeight,
-        age: null,
         weeklyGoal: weeklyGoal || 3,
         stepGoal: 10000,
         palValue: 1.4,
         darkMode: darkMode ?? true,
+        colorScheme: colorScheme || 'red',
         createdAt
       }
     });
@@ -113,13 +115,14 @@ router.post('/login', async (req, res: Response) => {
         username: user.username,
         email: user.email,
         gender: user.gender,
+        birthdate: user.birthdate,
         bodyWeight: user.body_weight,
         bodyHeight: user.body_height,
-        age: user.age,
         weeklyGoal: user.weekly_goal,
         stepGoal: user.step_goal,
         palValue: user.pal_value,
         darkMode: user.dark_mode === 1,
+        colorScheme: user.color_scheme || 'red',
         createdAt: user.created_at
       }
     });
@@ -144,13 +147,14 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       username: user.username,
       email: user.email,
       gender: user.gender,
+      birthdate: user.birthdate,
       bodyWeight: user.body_weight,
       bodyHeight: user.body_height,
-      age: user.age,
       weeklyGoal: user.weekly_goal,
       stepGoal: user.step_goal,
       palValue: user.pal_value,
       darkMode: user.dark_mode === 1,
+      colorScheme: user.color_scheme || 'red',
       createdAt: user.created_at
     });
   } catch (error) {
@@ -173,9 +177,13 @@ router.patch('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       updates.push('body_height = ?');
       values.push(req.body.bodyHeight);
     }
-    if (req.body.age !== undefined) {
-      updates.push('age = ?');
-      values.push(req.body.age);
+    if (req.body.birthdate !== undefined) {
+      updates.push('birthdate = ?');
+      values.push(req.body.birthdate);
+    }
+    if (req.body.gender !== undefined) {
+      updates.push('gender = ?');
+      values.push(req.body.gender);
     }
     if (req.body.weeklyGoal !== undefined) {
       updates.push('weekly_goal = ?');
@@ -192,6 +200,10 @@ router.patch('/me', authMiddleware, (req: AuthRequest, res: Response) => {
     if (req.body.darkMode !== undefined) {
       updates.push('dark_mode = ?');
       values.push(req.body.darkMode ? 1 : 0);
+    }
+    if (req.body.colorScheme !== undefined) {
+      updates.push('color_scheme = ?');
+      values.push(req.body.colorScheme);
     }
 
     if (updates.length === 0) {

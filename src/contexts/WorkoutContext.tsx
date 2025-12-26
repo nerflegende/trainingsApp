@@ -20,14 +20,19 @@ interface WorkoutContextType {
   addSet: (exerciseId: string) => void;
   removeSet: (exerciseId: string, setId: string) => void;
   removeExercise: (exerciseId: string) => void;
-  endWorkout: () => Promise<WorkoutRecord | null>;
+  endWorkout: (totalWeight?: number) => Promise<WorkoutRecord | null>;
   cancelWorkout: () => void;
   savePlan: (plan: Omit<WorkoutPlan, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   deletePlan: (planId: string) => Promise<void>;
   loadUserData: () => Promise<void>;
-  addBodyMeasurement: (weight?: number, height?: number) => Promise<void>;
+  addBodyMeasurement: (data: { weight?: number; height?: number; bodyFat?: number; chest?: number; arms?: number; waist?: number; legs?: number }) => Promise<void>;
   addCustomExercise: (exercise: { name: string; description: string; muscles: string[]; gadgets: string[] }) => Promise<void>;
+  updateCustomExercise: (id: string, exercise: { name?: string; description?: string; muscles?: string[]; gadgets?: string[] }) => Promise<void>;
+  deleteCustomExercise: (id: string) => Promise<void>;
   addCustomGadget: (gadget: { name: string; description: string }) => Promise<void>;
+  updateCustomGadget: (id: string, gadget: { name?: string; description?: string }) => Promise<void>;
+  deleteCustomGadget: (id: string) => Promise<void>;
+  deleteWorkout: (workoutId: string) => Promise<void>;
   getWorkoutsForDate: (date: Date) => WorkoutRecord[];
   getMeasurementsForDate: (date: Date) => BodyMeasurement[];
   calculateStreak: () => number;
@@ -87,7 +92,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         planName: w.planName,
         dayName: w.dayName,
         exercises: w.exercises as WorkoutExercise[],
-        duration: w.duration
+        duration: w.duration,
+        totalWeight: w.totalWeight || 0
       }));
       setWorkoutHistory(history);
 
@@ -98,7 +104,12 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         userId: m.userId,
         date: new Date(m.date),
         weight: m.weight,
-        height: m.height
+        height: m.height,
+        bodyFat: m.bodyFat,
+        chest: m.chest,
+        arms: m.arms,
+        waist: m.waist,
+        legs: m.legs
       }));
       setBodyMeasurements(measurements);
 
@@ -262,11 +273,18 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
-  async function endWorkout(): Promise<WorkoutRecord | null> {
+  async function endWorkout(totalWeight?: number): Promise<WorkoutRecord | null> {
     if (!activeWorkout || !currentUser) return null;
 
     const endTime = new Date();
     const duration = Math.round((endTime.getTime() - activeWorkout.startTime.getTime()) / 60000);
+
+    // Calculate total weight if not provided
+    const calculatedTotalWeight = totalWeight ?? activeWorkout.exercises.reduce((acc, ex) => {
+      return acc + ex.sets
+        .filter(s => s.completed && s.weight)
+        .reduce((setAcc, s) => setAcc + (s.weight || 0), 0);
+    }, 0);
 
     try {
       const result = await api.saveWorkout({
@@ -274,7 +292,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         planName: activeWorkout.planName,
         dayName: activeWorkout.dayName,
         exercises: activeWorkout.exercises,
-        duration
+        duration,
+        totalWeight: calculatedTotalWeight
       });
 
       const savedRecord: WorkoutRecord = {
@@ -284,7 +303,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         planName: result.planName,
         dayName: result.dayName,
         exercises: result.exercises as WorkoutExercise[],
-        duration: result.duration
+        duration: result.duration,
+        totalWeight: result.totalWeight || calculatedTotalWeight
       };
       setWorkoutHistory(prev => [savedRecord, ...prev]);
       setActiveWorkout(null);
@@ -333,21 +353,35 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function addBodyMeasurement(weight?: number, height?: number) {
+  async function addBodyMeasurement(data: { weight?: number; height?: number; bodyFat?: number; chest?: number; arms?: number; waist?: number; legs?: number }) {
     if (!currentUser) return;
 
     try {
-      const result = await api.addMeasurement({ weight, height });
+      const result = await api.addMeasurement(data);
       
       setBodyMeasurements(prev => [{
         id: result.id,
         userId: result.userId,
         date: new Date(result.date),
         weight: result.weight,
-        height: result.height
+        height: result.height,
+        bodyFat: result.bodyFat,
+        chest: result.chest,
+        arms: result.arms,
+        waist: result.waist,
+        legs: result.legs
       }, ...prev]);
     } catch (error) {
       console.error('Error saving body measurement:', error);
+    }
+  }
+
+  async function deleteWorkout(workoutId: string) {
+    try {
+      await api.deleteWorkout(workoutId);
+      setWorkoutHistory(prev => prev.filter(w => w.id !== workoutId));
+    } catch (error) {
+      console.error('Error deleting workout:', error);
     }
   }
 
@@ -394,12 +428,52 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function updateCustomExercise(id: string, exercise: { name?: string; description?: string; muscles?: string[]; gadgets?: string[] }) {
+    try {
+      await api.updateCustomExercise(id, exercise);
+      setCustomExercises(prev => prev.map(ex => 
+        ex.id === id ? { ...ex, ...exercise } : ex
+      ));
+    } catch (error) {
+      console.error('Error updating custom exercise:', error);
+    }
+  }
+
+  async function deleteCustomExercise(id: string) {
+    try {
+      await api.deleteCustomExercise(id);
+      setCustomExercises(prev => prev.filter(ex => ex.id !== id));
+    } catch (error) {
+      console.error('Error deleting custom exercise:', error);
+    }
+  }
+
   async function addCustomGadget(gadget: { name: string; description: string }) {
     try {
       const result = await api.createCustomGadget(gadget);
       setCustomGadgets(prev => [...prev, result]);
     } catch (error) {
       console.error('Error creating custom gadget:', error);
+    }
+  }
+
+  async function updateCustomGadget(id: string, gadget: { name?: string; description?: string }) {
+    try {
+      await api.updateCustomGadget(id, gadget);
+      setCustomGadgets(prev => prev.map(g => 
+        g.id === id ? { ...g, ...gadget } : g
+      ));
+    } catch (error) {
+      console.error('Error updating custom gadget:', error);
+    }
+  }
+
+  async function deleteCustomGadget(id: string) {
+    try {
+      await api.deleteCustomGadget(id);
+      setCustomGadgets(prev => prev.filter(g => g.id !== id));
+    } catch (error) {
+      console.error('Error deleting custom gadget:', error);
     }
   }
 
@@ -426,7 +500,12 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     loadUserData,
     addBodyMeasurement,
     addCustomExercise,
+    updateCustomExercise,
+    deleteCustomExercise,
     addCustomGadget,
+    updateCustomGadget,
+    deleteCustomGadget,
+    deleteWorkout,
     getWorkoutsForDate,
     getMeasurementsForDate,
     calculateStreak

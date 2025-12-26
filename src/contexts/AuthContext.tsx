@@ -39,13 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             username: user.username,
             email: user.email,
             gender: user.gender,
+            birthdate: user.birthdate,
             bodyWeight: user.bodyWeight,
             bodyHeight: user.bodyHeight,
-            age: user.age,
             weeklyGoal: user.weeklyGoal,
             stepGoal: user.stepGoal,
             palValue: user.palValue,
             darkMode: user.darkMode,
+            colorScheme: (user.colorScheme as User['colorScheme']) || 'red',
             createdAt: new Date(user.createdAt)
           };
           setCurrentUser(userData);
@@ -65,10 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
       username,
       gender: additionalData.gender,
+      birthdate: additionalData.birthdate,
       bodyWeight: additionalData.bodyWeight,
       bodyHeight: additionalData.bodyHeight,
       weeklyGoal: additionalData.weeklyGoal,
-      darkMode: additionalData.darkMode
+      darkMode: additionalData.darkMode,
+      colorScheme: additionalData.colorScheme
     });
 
     const userData: User = {
@@ -76,13 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       username: result.user.username,
       email: result.user.email,
       gender: result.user.gender,
+      birthdate: result.user.birthdate,
       bodyWeight: result.user.bodyWeight,
       bodyHeight: result.user.bodyHeight,
-      age: result.user.age,
       weeklyGoal: result.user.weeklyGoal,
       stepGoal: result.user.stepGoal,
       palValue: result.user.palValue,
       darkMode: result.user.darkMode,
+      colorScheme: (result.user.colorScheme as User['colorScheme']) || 'red',
       createdAt: new Date(result.user.createdAt)
     };
 
@@ -98,13 +102,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       username: result.user.username,
       email: result.user.email,
       gender: result.user.gender,
+      birthdate: result.user.birthdate,
       bodyWeight: result.user.bodyWeight,
       bodyHeight: result.user.bodyHeight,
-      age: result.user.age,
       weeklyGoal: result.user.weeklyGoal,
       stepGoal: result.user.stepGoal,
       palValue: result.user.palValue,
       darkMode: result.user.darkMode,
+      colorScheme: (result.user.colorScheme as User['colorScheme']) || 'red',
       createdAt: new Date(result.user.createdAt)
     };
 
@@ -126,9 +131,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       bodyHeight: data.bodyHeight,
       weeklyGoal: data.weeklyGoal,
       darkMode: data.darkMode,
-      age: data.age,
+      birthdate: data.birthdate,
+      gender: data.gender,
       stepGoal: data.stepGoal,
-      palValue: data.palValue
+      palValue: data.palValue,
+      colorScheme: data.colorScheme
     });
     
     if (userData) {

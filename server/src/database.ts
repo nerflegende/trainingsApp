@@ -29,13 +29,14 @@ export function initializeDatabase() {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       gender TEXT,
+      birthdate TEXT,
       body_weight REAL,
       body_height REAL,
-      age INTEGER,
       weekly_goal INTEGER DEFAULT 3,
       step_goal INTEGER DEFAULT 10000,
       pal_value REAL DEFAULT 1.4,
       dark_mode INTEGER DEFAULT 1,
+      color_scheme TEXT DEFAULT 'red',
       created_at TEXT NOT NULL
     );
 
@@ -71,6 +72,11 @@ export function initializeDatabase() {
       date TEXT NOT NULL,
       weight REAL,
       height REAL,
+      body_fat REAL,
+      chest REAL,
+      arms REAL,
+      waist REAL,
+      legs REAL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -104,7 +110,7 @@ export function initializeDatabase() {
 
   // Add new columns if they don't exist (for migration)
   try {
-    db.exec(`ALTER TABLE users ADD COLUMN age INTEGER`);
+    db.exec(`ALTER TABLE users ADD COLUMN birthdate TEXT`);
   } catch { /* Column may already exist */ }
   try {
     db.exec(`ALTER TABLE users ADD COLUMN step_goal INTEGER DEFAULT 10000`);
@@ -116,7 +122,25 @@ export function initializeDatabase() {
     db.exec(`ALTER TABLE users ADD COLUMN gender TEXT`);
   } catch { /* Column may already exist */ }
   try {
+    db.exec(`ALTER TABLE users ADD COLUMN color_scheme TEXT DEFAULT 'red'`);
+  } catch { /* Column may already exist */ }
+  try {
     db.exec(`ALTER TABLE workout_history ADD COLUMN total_weight REAL DEFAULT 0`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE body_measurements ADD COLUMN body_fat REAL`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE body_measurements ADD COLUMN chest REAL`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE body_measurements ADD COLUMN arms REAL`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE body_measurements ADD COLUMN waist REAL`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE body_measurements ADD COLUMN legs REAL`);
   } catch { /* Column may already exist */ }
 
   console.log('Database initialized successfully');

@@ -7,7 +7,7 @@ import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { defaultExercises, defaultGadgets } from '../data/defaultData';
-import type { WorkoutPlan, WorkoutExercise, WorkoutRecord } from '../types';
+import type { WorkoutPlan, WorkoutExercise, WorkoutRecord, Exercise, Gadget } from '../types';
 
 // Motivational messages for workout completion
 const completionMessages = [
@@ -22,7 +22,7 @@ const completionMessages = [
   "Dein Körper dankt es dir! 🙌",
   "Training abgehakt, Mission erfüllt! ✅",
   "Du bist eine Maschine! 🤖",
-  "Bleib dran, du schaffst das! 💯",
+  "Bleib dran, du schaffst das! ��",
   "Das war ein starkes Training! 🦁",
   "Jeden Tag ein bisschen besser! 📈",
   "Disziplin zahlt sich aus! 🎖️"
@@ -34,6 +34,8 @@ export function TrainingPage() {
   const {
     activeWorkout,
     workoutPlans,
+    customExercises,
+    customGadgets,
     startFreeWorkout,
     startPlanWorkout,
     addExerciseToWorkout,
@@ -83,7 +85,17 @@ export function TrainingPage() {
   const startTimeRef = useRef<number | null>(null);
   const elapsedRef = useRef(0);
   const restStartRef = useRef<number | null>(null);
-  const restElapsedRef = useRef(0);
+
+  // Combine default and custom exercises/gadgets for selection
+  const allExercises: Exercise[] = useMemo(() => [
+    ...defaultExercises,
+    ...customExercises.map(ex => ({ ...ex, isCustom: true }))
+  ], [customExercises]);
+
+  const allGadgets: Gadget[] = useMemo(() => [
+    ...defaultGadgets,
+    ...customGadgets.map(g => ({ ...g, isCustom: true }))
+  ], [customGadgets]);
 
   // Auto-expand first exercise when workout starts
   useEffect(() => {
@@ -125,13 +137,12 @@ export function TrainingPage() {
     };
   }, [activeWorkout]);
 
-  // Rest timer effect
+  // Rest timer effect - removed blinking
   useEffect(() => {
     if (!restRunning || restRemaining <= 0) return;
 
     if (restStartRef.current === null) {
       restStartRef.current = performance.now();
-      restElapsedRef.current = 0;
     }
 
     const updateRestTimer = () => {
@@ -169,7 +180,7 @@ export function TrainingPage() {
     };
   }, [restRunning, restRemaining, restTime]);
 
-  const filteredExercises = defaultExercises.filter(ex =>
+  const filteredExercises = allExercises.filter(ex =>
     ex.name.toLowerCase().includes(searchExercise.toLowerCase()) ||
     ex.muscles.some(m => m.toLowerCase().includes(searchExercise.toLowerCase()))
   );
@@ -192,10 +203,6 @@ export function TrainingPage() {
     setShowPlanSelect(false);
     startTimeRef.current = performance.now();
     elapsedRef.current = 0;
-    // Auto-expand first exercise
-    if (plan.days[dayIndex].exercises.length > 0) {
-      // Will be set by useEffect
-    }
   };
 
   const handleAddExercise = (exerciseId: string, exerciseName: string) => {
@@ -205,17 +212,17 @@ export function TrainingPage() {
   };
 
   const handleEndWorkout = async () => {
-    // Calculate total weight before ending workout
-    if (activeWorkout) {
-      const total = activeWorkout.exercises.reduce((acc, ex) => {
-        return acc + ex.sets
-          .filter(s => s.completed && s.weight)
-          .reduce((setAcc, s) => setAcc + (s.weight || 0), 0);
-      }, 0);
-      setTotalWeight(total);
-    }
+    if (!activeWorkout) return;
     
-    const summary = await endWorkout();
+    // Calculate total weight before ending workout
+    const total = activeWorkout.exercises.reduce((acc, ex) => {
+      return acc + ex.sets
+        .filter(s => s.completed && s.weight)
+        .reduce((setAcc, s) => setAcc + (s.weight || 0), 0);
+    }, 0);
+    setTotalWeight(total);
+    
+    const summary = await endWorkout(total);
     if (summary) {
       setWorkoutSummary(summary);
     }
@@ -336,8 +343,8 @@ export function TrainingPage() {
           </h1>
         </div>
 
-        <div className="p-6 max-w-lg mx-auto">
-          <div className={`p-8 rounded-xl text-center ${
+        <div className="p-6 flex justify-center">
+          <div className={`p-8 rounded-xl text-center w-full max-w-lg ${
             darkMode ? 'bg-dark-card border border-dark-border' : 'bg-light-card border border-light-border'
           }`}>
             <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -349,10 +356,12 @@ export function TrainingPage() {
             <p className={`mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               Starte ein Training, um deine Fortschritte zu tracken
             </p>
-            <Button size="lg" onClick={() => setShowStartModal(true)}>
-              <Play size={20} />
-              Training starten
-            </Button>
+            <div className="flex justify-center">
+              <Button size="lg" onClick={() => setShowStartModal(true)}>
+                <Play size={20} />
+                Training starten
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -475,11 +484,11 @@ export function TrainingPage() {
                 </span>
               </div>
               
-              {/* Rest Timer */}
+              {/* Rest Timer - removed animate-pulse */}
               <div 
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg cursor-pointer ${
                   restRemaining > 0 && restRunning
-                    ? 'bg-primary animate-pulse'
+                    ? 'bg-primary'
                     : darkMode ? 'bg-dark-border hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'
                 }`}
                 onClick={() => setShowRestSettings(true)}
@@ -692,13 +701,17 @@ export function TrainingPage() {
                 key={ex.id}
                 onClick={() => handleAddExercise(ex.id, ex.name)}
                 className={`w-full p-3 rounded-lg text-left transition-colors ${
-                  darkMode 
-                    ? 'bg-dark-border hover:bg-gray-700' 
-                    : 'bg-gray-100 hover:bg-gray-200'
+                  ex.isCustom
+                    ? darkMode
+                      ? 'bg-primary/20 border border-primary/40 hover:border-primary'
+                      : 'bg-primary/10 border border-primary/30 hover:border-primary'
+                    : darkMode 
+                      ? 'bg-dark-border hover:bg-gray-700' 
+                      : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
                 <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {ex.name}
+                  {ex.name} {ex.isCustom && '✨'}
                 </h4>
                 <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   {ex.muscles.join(', ')}
@@ -740,19 +753,23 @@ export function TrainingPage() {
             >
               Keines
             </button>
-            {defaultGadgets.map(gadget => (
+            {allGadgets.map(gadget => (
               <button
                 key={gadget.id}
                 onClick={() => saveEdit(gadget.name)}
                 className={`w-full p-3 rounded-lg text-left ${
                   editValue === gadget.name
                     ? 'bg-primary text-white'
-                    : darkMode
-                    ? 'bg-dark-border hover:bg-gray-700 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                    : gadget.isCustom
+                      ? darkMode
+                        ? 'bg-primary/20 border border-primary/40 hover:border-primary text-white'
+                        : 'bg-primary/10 border border-primary/30 hover:border-primary text-gray-900'
+                      : darkMode
+                        ? 'bg-dark-border hover:bg-gray-700 text-white'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                 }`}
               >
-                {gadget.name}
+                {gadget.name} {gadget.isCustom && '✨'}
               </button>
             ))}
           </div>
@@ -845,7 +862,7 @@ export function TrainingPage() {
         </div>
       </Modal>
 
-      {/* Workout Summary */}
+      {/* Workout Summary Modal - Fixed to always show */}
       <Modal
         isOpen={workoutSummary !== null}
         onClose={handleCloseSummary}
