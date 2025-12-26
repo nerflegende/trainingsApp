@@ -722,7 +722,7 @@ export function UserProfilePage() {
                   <ul className="text-sm space-y-1">
                     {!userData?.bodyWeight && !bodyMeasurements[0]?.weight && <li>• Gewicht</li>}
                     {!userData?.bodyHeight && !bodyMeasurements[0]?.height && <li>• Größe</li>}
-                    {!userData?.age && <li>• Alter</li>}
+                    {!userAge && <li>• Geburtsdatum</li>}
                     {!userData?.gender && <li>• Geschlecht</li>}
                   </ul>
                   <Button

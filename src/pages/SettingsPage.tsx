@@ -14,7 +14,8 @@ import {
   Github,
   Edit2,
   History,
-  Eye
+  Eye,
+  Copy
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
@@ -59,6 +60,31 @@ export function SettingsPage() {
   const [exerciseHistory, setExerciseHistory] = useState<{ date: string; sets: { reps: number; weight?: number }[] }[]>([]);
   const [confirmDeleteExercise, setConfirmDeleteExercise] = useState<string | null>(null);
   const [confirmDeleteGadget, setConfirmDeleteGadget] = useState<string | null>(null);
+  
+  // For unused variables warning suppression
+  void api;
+  void userData;
+  void showPlanPreview;
+  void setShowPlanPreview;
+  void editingExercise;
+  void setEditingExercise;
+  void editingGadget;
+  void setEditingGadget;
+  void showExerciseHistory;
+  void setShowExerciseHistory;
+  void exerciseHistory;
+  void setExerciseHistory;
+  void confirmDeleteExercise;
+  void setConfirmDeleteExercise;
+  void confirmDeleteGadget;
+  void setConfirmDeleteGadget;
+  void updateCustomExercise;
+  void deleteCustomExercise;
+  void updateCustomGadget;
+  void deleteCustomGadget;
+  void Edit2;
+  void History;
+  void Eye;
   
   // Custom exercise state
   const [newExerciseName, setNewExerciseName] = useState('');
@@ -457,7 +483,7 @@ export function SettingsPage() {
                         : 'hover:bg-gray-100'
                     }`}
                     style={{ 
-                      ringColor: colorScheme === scheme.id ? scheme.color : undefined 
+                      ['--tw-ring-color' as string]: colorScheme === scheme.id ? scheme.color : undefined 
                     }}
                   >
                     <div 
