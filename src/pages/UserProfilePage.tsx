@@ -86,9 +86,9 @@ export function UserProfilePage() {
     const weight = bodyMeasurements[0]?.weight || userData?.bodyWeight;
     const height = bodyMeasurements[0]?.height || userData?.bodyHeight;
     const age = userData?.age;
-    const gender = userData?.gender || 'male';
+    const gender = userData?.gender;
     
-    if (!weight || !height || !age) return null;
+    if (!weight || !height || !age || !gender) return null;
     
     // Mifflin-St Jeor equation
     // Male: 10 * weight(kg) + 6.25 * height(cm) - 5 * age(y) + 5
@@ -490,6 +490,7 @@ export function UserProfilePage() {
                     {!userData?.bodyWeight && !bodyMeasurements[0]?.weight && <li>• Gewicht</li>}
                     {!userData?.bodyHeight && !bodyMeasurements[0]?.height && <li>• Größe</li>}
                     {!userData?.age && <li>• Alter</li>}
+                    {!userData?.gender && <li>• Geschlecht</li>}
                   </ul>
                   <Button
                     variant="outline"

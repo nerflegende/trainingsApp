@@ -69,11 +69,16 @@ export function TrainingPage() {
   const [restRunning, setRestRunning] = useState(false);
   const [showRestSettings, setShowRestSettings] = useState(false);
   
-  // Random completion message
-  const completionMessage = useMemo(() => 
-    completionMessages[Math.floor(Math.random() * completionMessages.length)], 
-    [workoutSummary]
-  );
+  // Random completion message - use useRef to keep it stable
+  const completionMessageRef = useRef(completionMessages[Math.floor(Math.random() * completionMessages.length)]);
+  
+  // Only update the message when a new workout summary is created
+  const completionMessage = useMemo(() => {
+    if (workoutSummary) {
+      completionMessageRef.current = completionMessages[Math.floor(Math.random() * completionMessages.length)];
+    }
+    return completionMessageRef.current;
+  }, [workoutSummary !== null]);
   
   const startTimeRef = useRef<number | null>(null);
   const elapsedRef = useRef(0);
