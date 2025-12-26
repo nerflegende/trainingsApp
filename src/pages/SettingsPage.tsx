@@ -11,14 +11,15 @@ import {
   Sun,
   Moon,
   ExternalLink,
-  Github
+  Github,
+  Copy
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
-import { defaultExercises, defaultGadgets } from '../data/defaultData';
+import { defaultExercises, defaultGadgets, defaultWorkoutPlans } from '../data/defaultData';
 import type { WorkoutDay, PlannedExercise, Exercise, Gadget } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,7 +28,7 @@ type TabType = 'plans' | 'exercises' | 'gadgets' | 'settings';
 export function SettingsPage() {
   const location = useLocation();
   const { darkMode, toggleDarkMode } = useTheme();
-  const { workoutPlans, savePlan, deletePlan } = useWorkout();
+  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget } = useWorkout();
 
   // Get initial tab from location state
   const getInitialTab = (): TabType => {
@@ -42,6 +43,19 @@ export function SettingsPage() {
   const [showCreatePlan, setShowCreatePlan] = useState(false);
   const [showExerciseDetail, setShowExerciseDetail] = useState<Exercise | null>(null);
   const [showGadgetDetail, setShowGadgetDetail] = useState<Gadget | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showAddExercise, setShowAddExercise] = useState(false);
+  const [showAddGadget, setShowAddGadget] = useState(false);
+  
+  // Custom exercise state
+  const [newExerciseName, setNewExerciseName] = useState('');
+  const [newExerciseDescription, setNewExerciseDescription] = useState('');
+  const [newExerciseMuscles, setNewExerciseMuscles] = useState('');
+  const [newExerciseGadgets, setNewExerciseGadgets] = useState('');
+  
+  // Custom gadget state
+  const [newGadgetName, setNewGadgetName] = useState('');
+  const [newGadgetDescription, setNewGadgetDescription] = useState('');
   
   // Plan creation state
   const [planName, setPlanName] = useState('');
@@ -54,6 +68,9 @@ export function SettingsPage() {
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [showAddExerciseToPlan, setShowAddExerciseToPlan] = useState(false);
   const [exerciseSearch, setExerciseSearch] = useState('');
+  
+  // Combine default and custom exercises/gadgets
+  const allExercises = [...defaultExercises, ...customExercises];
 
   const tabs: { id: TabType; label: string; icon: typeof ClipboardList }[] = [
     { id: 'plans', label: 'Pläne', icon: ClipboardList },
@@ -141,20 +158,79 @@ export function SettingsPage() {
     ));
   };
 
-  const filteredExercises = defaultExercises.filter(ex =>
+  const filteredExercises = allExercises.filter(ex =>
     ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
     ex.muscles.some(m => m.toLowerCase().includes(exerciseSearch.toLowerCase()))
   );
+
+  const handleCopyTemplate = async (templateId: string) => {
+    const template = defaultWorkoutPlans.find(t => t.id === templateId);
+    if (!template) return;
+    
+    await savePlan({
+      name: template.name,
+      description: template.description,
+      days: template.days.map(day => ({
+        id: uuidv4(),
+        name: day.name,
+        exercises: day.exercises.map(ex => ({
+          ...ex,
+          id: uuidv4()
+        }))
+      })),
+      isTemplate: false
+    });
+    setShowTemplates(false);
+  };
+
+  const handleAddCustomExercise = async () => {
+    if (!newExerciseName.trim()) return;
+    
+    const muscles = newExerciseMuscles.split(',').map(m => m.trim()).filter(m => m);
+    const gadgets = newExerciseGadgets.split(',').map(g => g.trim()).filter(g => g);
+    
+    await addCustomExercise({
+      name: newExerciseName,
+      description: newExerciseDescription,
+      muscles,
+      gadgets
+    });
+    
+    setNewExerciseName('');
+    setNewExerciseDescription('');
+    setNewExerciseMuscles('');
+    setNewExerciseGadgets('');
+    setShowAddExercise(false);
+  };
+
+  const handleAddCustomGadget = async () => {
+    if (!newGadgetName.trim()) return;
+    
+    await addCustomGadget({
+      name: newGadgetName,
+      description: newGadgetDescription
+    });
+    
+    setNewGadgetName('');
+    setNewGadgetDescription('');
+    setShowAddGadget(false);
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'plans':
         return (
           <div className="space-y-4">
-            <Button fullWidth onClick={() => setShowCreatePlan(true)}>
-              <Plus size={20} />
-              Neuen Plan erstellen
-            </Button>
+            <div className="flex gap-2">
+              <Button fullWidth onClick={() => setShowCreatePlan(true)}>
+                <Plus size={20} />
+                Neuer Plan
+              </Button>
+              <Button fullWidth variant="outline" onClick={() => setShowTemplates(true)}>
+                <Copy size={20} />
+                Vorlagen
+              </Button>
+            </div>
 
             {workoutPlans.length === 0 ? (
               <div className={`text-center py-12 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -198,6 +274,41 @@ export function SettingsPage() {
       case 'exercises':
         return (
           <div className="space-y-3">
+            <Button fullWidth variant="outline" onClick={() => setShowAddExercise(true)}>
+              <Plus size={20} />
+              Übung hinzufügen
+            </Button>
+            
+            {customExercises.length > 0 && (
+              <>
+                <h3 className={`font-semibold mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Eigene Übungen
+                </h3>
+                {customExercises.map(exercise => (
+                  <button
+                    key={exercise.id}
+                    onClick={() => setShowExerciseDetail(exercise)}
+                    className={`w-full p-4 rounded-xl text-left flex justify-between items-center ${
+                      darkMode ? 'bg-primary/20 border border-primary/40 hover:border-primary' : 'bg-primary/10 border border-primary/30 hover:border-primary'
+                    }`}
+                  >
+                    <div>
+                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {exercise.name}
+                      </h3>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {exercise.muscles.slice(0, 3).join(', ')}
+                      </p>
+                    </div>
+                    <ChevronRight size={20} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                  </button>
+                ))}
+              </>
+            )}
+            
+            <h3 className={`font-semibold mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Standard Übungen
+            </h3>
             {defaultExercises.map(exercise => (
               <button
                 key={exercise.id}
@@ -223,6 +334,41 @@ export function SettingsPage() {
       case 'gadgets':
         return (
           <div className="space-y-3">
+            <Button fullWidth variant="outline" onClick={() => setShowAddGadget(true)}>
+              <Plus size={20} />
+              Gadget hinzufügen
+            </Button>
+            
+            {customGadgets.length > 0 && (
+              <>
+                <h3 className={`font-semibold mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Eigene Gadgets
+                </h3>
+                {customGadgets.map(gadget => (
+                  <button
+                    key={gadget.id}
+                    onClick={() => setShowGadgetDetail(gadget)}
+                    className={`w-full p-4 rounded-xl text-left flex justify-between items-center ${
+                      darkMode ? 'bg-primary/20 border border-primary/40 hover:border-primary' : 'bg-primary/10 border border-primary/30 hover:border-primary'
+                    }`}
+                  >
+                    <div>
+                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {gadget.name}
+                      </h3>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {gadget.description}
+                      </p>
+                    </div>
+                    <ChevronRight size={20} className={darkMode ? 'text-gray-400' : 'text-gray-600'} />
+                  </button>
+                ))}
+              </>
+            )}
+            
+            <h3 className={`font-semibold mt-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              Standard Gadgets
+            </h3>
             {defaultGadgets.map(gadget => (
               <button
                 key={gadget.id}
@@ -601,6 +747,119 @@ export function SettingsPage() {
             </p>
           </div>
         )}
+      </Modal>
+
+      {/* Templates Modal */}
+      <Modal
+        isOpen={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        title="Planvorlagen"
+      >
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          {defaultWorkoutPlans.map(template => (
+            <div
+              key={template.id}
+              className={`p-4 rounded-lg ${
+                darkMode ? 'bg-dark-border' : 'bg-gray-100'
+              }`}
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {template.name}
+                  </h3>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {template.description}
+                  </p>
+                  <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {template.days.length} Tag(e) • {template.days.reduce((acc, d) => acc + d.exercises.length, 0)} Übungen
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleCopyTemplate(template.id)}
+                >
+                  <Copy size={16} />
+                  Kopieren
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      {/* Add Exercise Modal */}
+      <Modal
+        isOpen={showAddExercise}
+        onClose={() => {
+          setShowAddExercise(false);
+          setNewExerciseName('');
+          setNewExerciseDescription('');
+          setNewExerciseMuscles('');
+          setNewExerciseGadgets('');
+        }}
+        title="Neue Übung erstellen"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            value={newExerciseName}
+            onChange={(e) => setNewExerciseName(e.target.value)}
+            placeholder="z.B. Kurzhantel Schulterdrücken"
+            required
+          />
+          <Input
+            label="Beschreibung"
+            value={newExerciseDescription}
+            onChange={(e) => setNewExerciseDescription(e.target.value)}
+            placeholder="Kurze Beschreibung der Übung"
+          />
+          <Input
+            label="Muskeln (kommagetrennt)"
+            value={newExerciseMuscles}
+            onChange={(e) => setNewExerciseMuscles(e.target.value)}
+            placeholder="z.B. Schultern, Trizeps"
+          />
+          <Input
+            label="Gadgets (kommagetrennt)"
+            value={newExerciseGadgets}
+            onChange={(e) => setNewExerciseGadgets(e.target.value)}
+            placeholder="z.B. Kurzhanteln"
+          />
+          <Button fullWidth onClick={handleAddCustomExercise} disabled={!newExerciseName.trim()}>
+            Übung erstellen
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Add Gadget Modal */}
+      <Modal
+        isOpen={showAddGadget}
+        onClose={() => {
+          setShowAddGadget(false);
+          setNewGadgetName('');
+          setNewGadgetDescription('');
+        }}
+        title="Neues Gadget erstellen"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            value={newGadgetName}
+            onChange={(e) => setNewGadgetName(e.target.value)}
+            placeholder="z.B. TRX-Band"
+            required
+          />
+          <Input
+            label="Beschreibung"
+            value={newGadgetDescription}
+            onChange={(e) => setNewGadgetDescription(e.target.value)}
+            placeholder="Kurze Beschreibung des Gadgets"
+          />
+          <Button fullWidth onClick={handleAddCustomGadget} disabled={!newGadgetName.trim()}>
+            Gadget erstellen
+          </Button>
+        </div>
       </Modal>
     </div>
   );

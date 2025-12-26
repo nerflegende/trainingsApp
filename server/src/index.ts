@@ -9,6 +9,8 @@ import authRoutes from './routes/auth.js';
 import plansRoutes from './routes/plans.js';
 import workoutsRoutes from './routes/workouts.js';
 import measurementsRoutes from './routes/measurements.js';
+import exercisesRoutes from './routes/exercises.js';
+import gadgetsRoutes from './routes/gadgets.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +55,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/plans', plansRoutes);
 app.use('/api/workouts', workoutsRoutes);
 app.use('/api/measurements', measurementsRoutes);
+app.use('/api/exercises', exercisesRoutes);
+app.use('/api/gadgets', gadgetsRoutes);
 
 // Serve static files in production
 const clientDistPath = path.join(__dirname, '..', '..', 'dist');

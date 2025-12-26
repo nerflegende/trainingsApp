@@ -86,11 +86,16 @@ export function UserProfilePage() {
     const weight = bodyMeasurements[0]?.weight || userData?.bodyWeight;
     const height = bodyMeasurements[0]?.height || userData?.bodyHeight;
     const age = userData?.age;
+    const gender = userData?.gender || 'male';
     
     if (!weight || !height || !age) return null;
     
-    // Assuming male for simplicity - could add gender to user profile
-    const bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+    // Mifflin-St Jeor equation
+    // Male: 10 * weight(kg) + 6.25 * height(cm) - 5 * age(y) + 5
+    // Female: 10 * weight(kg) + 6.25 * height(cm) - 5 * age(y) - 161
+    const bmr = gender === 'male'
+      ? 10 * weight + 6.25 * height - 5 * age + 5
+      : 10 * weight + 6.25 * height - 5 * age - 161;
     return Math.round(bmr);
   };
 

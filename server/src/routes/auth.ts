@@ -11,6 +11,7 @@ interface UserRow {
   username: string;
   email: string;
   password_hash: string;
+  gender: string | null;
   body_weight: number | null;
   body_height: number | null;
   age: number | null;
@@ -24,7 +25,7 @@ interface UserRow {
 // Register
 router.post('/register', async (req, res: Response) => {
   try {
-    const { email, password, username, bodyWeight, bodyHeight, weeklyGoal, darkMode } = req.body;
+    const { email, password, username, gender, bodyWeight, bodyHeight, weeklyGoal, darkMode } = req.body;
 
     // Validate required fields
     if (!email || !password || !username) {
@@ -47,9 +48,9 @@ router.post('/register', async (req, res: Response) => {
     const createdAt = new Date().toISOString();
 
     db.prepare(`
-      INSERT INTO users (id, username, email, password_hash, body_weight, body_height, weekly_goal, dark_mode, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(userId, username, email, passwordHash, bodyWeight || null, bodyHeight || null, weeklyGoal || 3, darkMode ? 1 : 0, createdAt);
+      INSERT INTO users (id, username, email, password_hash, gender, body_weight, body_height, weekly_goal, dark_mode, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(userId, username, email, passwordHash, gender || null, bodyWeight || null, bodyHeight || null, weeklyGoal || 3, darkMode ? 1 : 0, createdAt);
 
     // Generate token
     const token = generateToken(userId);
@@ -60,6 +61,7 @@ router.post('/register', async (req, res: Response) => {
         id: userId,
         username,
         email,
+        gender: gender || null,
         bodyWeight,
         bodyHeight,
         age: null,
@@ -110,6 +112,7 @@ router.post('/login', async (req, res: Response) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        gender: user.gender,
         bodyWeight: user.body_weight,
         bodyHeight: user.body_height,
         age: user.age,
@@ -140,6 +143,7 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       id: user.id,
       username: user.username,
       email: user.email,
+      gender: user.gender,
       bodyWeight: user.body_weight,
       bodyHeight: user.body_height,
       age: user.age,

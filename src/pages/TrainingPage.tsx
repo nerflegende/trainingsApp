@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Plus, Check, Trash2, Edit2, ChevronDown, ChevronUp, Clock, Timer, Pause, RotateCcw } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -8,6 +8,25 @@ import { Modal } from '../components/Modal';
 import { Input } from '../components/Input';
 import { defaultExercises, defaultGadgets } from '../data/defaultData';
 import type { WorkoutPlan, WorkoutExercise, WorkoutRecord } from '../types';
+
+// Motivational messages for workout completion
+const completionMessages = [
+  "Gut gemacht! 💪",
+  "Starke Leistung! 🔥",
+  "Weiter so! 🚀",
+  "Du bist auf dem besten Weg! ⭐",
+  "Jeder Tag macht dich stärker! 💎",
+  "Großartige Arbeit! 🎯",
+  "Du hast es drauf! 🏆",
+  "Respekt! Das war super! 👏",
+  "Dein Körper dankt es dir! 🙌",
+  "Training abgehakt, Mission erfüllt! ✅",
+  "Du bist eine Maschine! 🤖",
+  "Bleib dran, du schaffst das! 💯",
+  "Das war ein starkes Training! 🦁",
+  "Jeden Tag ein bisschen besser! 📈",
+  "Disziplin zahlt sich aus! 🎖️"
+];
 
 export function TrainingPage() {
   const navigate = useNavigate();
@@ -33,6 +52,7 @@ export function TrainingPage() {
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showEndWorkout, setShowEndWorkout] = useState(false);
   const [workoutSummary, setWorkoutSummary] = useState<WorkoutRecord | null>(null);
+  const [totalWeight, setTotalWeight] = useState(0);
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [editingExercise, setEditingExercise] = useState<{
     exercise: WorkoutExercise;
@@ -48,6 +68,12 @@ export function TrainingPage() {
   const [restRemaining, setRestRemaining] = useState(0);
   const [restRunning, setRestRunning] = useState(false);
   const [showRestSettings, setShowRestSettings] = useState(false);
+  
+  // Random completion message
+  const completionMessage = useMemo(() => 
+    completionMessages[Math.floor(Math.random() * completionMessages.length)], 
+    [workoutSummary]
+  );
   
   const startTimeRef = useRef<number | null>(null);
   const elapsedRef = useRef(0);
@@ -174,6 +200,16 @@ export function TrainingPage() {
   };
 
   const handleEndWorkout = async () => {
+    // Calculate total weight before ending workout
+    if (activeWorkout) {
+      const total = activeWorkout.exercises.reduce((acc, ex) => {
+        return acc + ex.sets
+          .filter(s => s.completed && s.weight)
+          .reduce((setAcc, s) => setAcc + (s.weight || 0), 0);
+      }, 0);
+      setTotalWeight(total);
+    }
+    
     const summary = await endWorkout();
     if (summary) {
       setWorkoutSummary(summary);
@@ -185,6 +221,7 @@ export function TrainingPage() {
 
   const handleCloseSummary = () => {
     setWorkoutSummary(null);
+    setTotalWeight(0);
     navigate('/');
   };
 
@@ -811,10 +848,21 @@ export function TrainingPage() {
       >
         {workoutSummary && (
           <div className="space-y-4">
+            {/* Motivational Message */}
+            <div className="text-center">
+              <p className="text-2xl mb-2">{completionMessage}</p>
+              {workoutSummary.planName && (
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {workoutSummary.planName} {workoutSummary.dayName && `• ${workoutSummary.dayName}`}
+                </p>
+              )}
+            </div>
+            
+            {/* Stats Grid */}
             <div className={`p-4 rounded-lg ${
               darkMode ? 'bg-dark-border' : 'bg-gray-100'
             }`}>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     {workoutSummary.duration}
@@ -839,10 +887,18 @@ export function TrainingPage() {
                     Sätze
                   </p>
                 </div>
+                <div>
+                  <p className={`text-2xl font-bold text-primary`}>
+                    {totalWeight.toLocaleString()} kg
+                  </p>
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    Gesamtgewicht
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto">
+            <div className="space-y-2 max-h-48 overflow-y-auto">
               {workoutSummary.exercises.map(ex => (
                 <div
                   key={ex.id}
@@ -861,7 +917,7 @@ export function TrainingPage() {
             </div>
 
             <Button fullWidth onClick={handleCloseSummary}>
-              Fertig
+              Abschließen
             </Button>
           </div>
         )}

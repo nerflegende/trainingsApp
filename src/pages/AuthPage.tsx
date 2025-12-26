@@ -19,6 +19,7 @@ export function AuthPage() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [bodyWeight, setBodyWeight] = useState('');
   const [bodyHeight, setBodyHeight] = useState('');
   const [weeklyGoal, setWeeklyGoal] = useState('3');
@@ -50,6 +51,7 @@ export function AuthPage() {
         }
 
         await register(email, password, username, {
+          gender,
           bodyWeight: bodyWeight ? parseFloat(bodyWeight) : undefined,
           bodyHeight: bodyHeight ? parseFloat(bodyHeight) : undefined,
           weeklyGoal: parseInt(weeklyGoal),
@@ -138,6 +140,43 @@ export function AuthPage() {
             <>
               <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 Passwort muss enthalten: Großbuchstabe, Kleinbuchstabe, Zahl, Sonderzeichen, mind. 6 Zeichen
+              </div>
+
+              {/* Gender Selection */}
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${
+                  darkMode ? 'text-gray-300' : 'text-gray-700'
+                }`}>
+                  Geschlecht
+                </label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setGender('male')}
+                    className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+                      gender === 'male'
+                        ? 'bg-primary text-white ring-2 ring-primary'
+                        : darkMode
+                        ? 'bg-dark-border text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    ♂️ Männlich
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender('female')}
+                    className={`flex-1 py-3 rounded-lg font-semibold transition-colors ${
+                      gender === 'female'
+                        ? 'bg-primary text-white ring-2 ring-primary'
+                        : darkMode
+                        ? 'bg-dark-border text-gray-300 hover:bg-gray-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    ♀️ Weiblich
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -56,6 +56,7 @@ class ApiClient {
     email: string;
     password: string;
     username: string;
+    gender?: 'male' | 'female';
     bodyWeight?: number;
     bodyHeight?: number;
     weeklyGoal?: number;
@@ -153,12 +154,37 @@ class ApiClient {
       body: JSON.stringify(data),
     });
   }
+
+  // Custom Exercises
+  async getCustomExercises() {
+    return this.request<ExerciseResponse[]>('/exercises');
+  }
+
+  async createCustomExercise(data: { name: string; description: string; muscles: string[]; gadgets: string[] }) {
+    return this.request<ExerciseResponse>('/exercises', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Custom Gadgets
+  async getCustomGadgets() {
+    return this.request<GadgetResponse[]>('/gadgets');
+  }
+
+  async createCustomGadget(data: { name: string; description: string }) {
+    return this.request<GadgetResponse>('/gadgets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export interface UserResponse {
   id: string;
   username: string;
   email: string;
+  gender?: 'male' | 'female';
   bodyWeight?: number;
   bodyHeight?: number;
   age?: number;
@@ -195,6 +221,24 @@ export interface MeasurementResponse {
   date: string;
   weight?: number;
   height?: number;
+}
+
+export interface ExerciseResponse {
+  id: string;
+  name: string;
+  description: string;
+  muscles: string[];
+  gadgets: string[];
+  isCustom: boolean;
+  userId?: string;
+}
+
+export interface GadgetResponse {
+  id: string;
+  name: string;
+  description: string;
+  isCustom: boolean;
+  userId?: string;
 }
 
 export const api = new ApiClient();

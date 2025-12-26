@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from './AuthContext';
-import type { ActiveWorkout, WorkoutExercise, WorkoutPlan, WorkoutRecord, WorkoutSet, BodyMeasurement, WorkoutDay } from '../types';
+import type { ActiveWorkout, WorkoutExercise, WorkoutPlan, WorkoutRecord, WorkoutSet, BodyMeasurement, WorkoutDay, Exercise, Gadget } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface WorkoutContextType {
@@ -9,6 +9,8 @@ interface WorkoutContextType {
   workoutPlans: WorkoutPlan[];
   workoutHistory: WorkoutRecord[];
   bodyMeasurements: BodyMeasurement[];
+  customExercises: Exercise[];
+  customGadgets: Gadget[];
   isLoading: boolean;
   startFreeWorkout: () => void;
   startPlanWorkout: (plan: WorkoutPlan, dayIndex: number) => void;
@@ -24,6 +26,8 @@ interface WorkoutContextType {
   deletePlan: (planId: string) => Promise<void>;
   loadUserData: () => Promise<void>;
   addBodyMeasurement: (weight?: number, height?: number) => Promise<void>;
+  addCustomExercise: (exercise: { name: string; description: string; muscles: string[]; gadgets: string[] }) => Promise<void>;
+  addCustomGadget: (gadget: { name: string; description: string }) => Promise<void>;
   getWorkoutsForDate: (date: Date) => WorkoutRecord[];
   getMeasurementsForDate: (date: Date) => BodyMeasurement[];
   calculateStreak: () => number;
@@ -45,6 +49,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
   const [workoutPlans, setWorkoutPlans] = useState<WorkoutPlan[]>([]);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutRecord[]>([]);
   const [bodyMeasurements, setBodyMeasurements] = useState<BodyMeasurement[]>([]);
+  const [customExercises, setCustomExercises] = useState<Exercise[]>([]);
+  const [customGadgets, setCustomGadgets] = useState<Gadget[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -95,6 +101,14 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
         height: m.height
       }));
       setBodyMeasurements(measurements);
+
+      // Load custom exercises
+      const exercisesData = await api.getCustomExercises();
+      setCustomExercises(exercisesData);
+
+      // Load custom gadgets
+      const gadgetsData = await api.getCustomGadgets();
+      setCustomGadgets(gadgetsData);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
@@ -371,11 +385,31 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     return workoutsThisWeek;
   }
 
+  async function addCustomExercise(exercise: { name: string; description: string; muscles: string[]; gadgets: string[] }) {
+    try {
+      const result = await api.createCustomExercise(exercise);
+      setCustomExercises(prev => [...prev, result]);
+    } catch (error) {
+      console.error('Error creating custom exercise:', error);
+    }
+  }
+
+  async function addCustomGadget(gadget: { name: string; description: string }) {
+    try {
+      const result = await api.createCustomGadget(gadget);
+      setCustomGadgets(prev => [...prev, result]);
+    } catch (error) {
+      console.error('Error creating custom gadget:', error);
+    }
+  }
+
   const value: WorkoutContextType = {
     activeWorkout,
     workoutPlans,
     workoutHistory,
     bodyMeasurements,
+    customExercises,
+    customGadgets,
     isLoading,
     startFreeWorkout,
     startPlanWorkout,
@@ -391,6 +425,8 @@ export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     deletePlan,
     loadUserData,
     addBodyMeasurement,
+    addCustomExercise,
+    addCustomGadget,
     getWorkoutsForDate,
     getMeasurementsForDate,
     calculateStreak

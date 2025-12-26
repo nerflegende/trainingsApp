@@ -28,6 +28,7 @@ export function initializeDatabase() {
       username TEXT UNIQUE NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
+      gender TEXT,
       body_weight REAL,
       body_height REAL,
       age INTEGER,
@@ -59,6 +60,7 @@ export function initializeDatabase() {
       day_name TEXT,
       exercises TEXT NOT NULL,
       duration INTEGER NOT NULL,
+      total_weight REAL DEFAULT 0,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
@@ -70,6 +72,26 @@ export function initializeDatabase() {
       weight REAL,
       height REAL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- Custom exercises table
+    CREATE TABLE IF NOT EXISTS custom_exercises (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      muscles TEXT NOT NULL,
+      gadgets TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    -- Custom gadgets table
+    CREATE TABLE IF NOT EXISTS custom_gadgets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL
     );
 
     -- Create indexes for better query performance
@@ -89,6 +111,12 @@ export function initializeDatabase() {
   } catch { /* Column may already exist */ }
   try {
     db.exec(`ALTER TABLE users ADD COLUMN pal_value REAL DEFAULT 1.4`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN gender TEXT`);
+  } catch { /* Column may already exist */ }
+  try {
+    db.exec(`ALTER TABLE workout_history ADD COLUMN total_weight REAL DEFAULT 0`);
   } catch { /* Column may already exist */ }
 
   console.log('Database initialized successfully');
