@@ -333,6 +333,91 @@ export function TrainingPage() {
 
   const restOptions = [30, 60, 90, 120, 180, 300];
 
+  // Workout Summary Modal - shared between both views
+  const renderWorkoutSummaryModal = () => (
+    <Modal
+      isOpen={workoutSummary !== null}
+      onClose={handleCloseSummary}
+      title="Training abgeschlossen! 🎉"
+    >
+      {workoutSummary && (
+        <div className="space-y-4">
+          {/* Motivational Message */}
+          <div className="text-center">
+            <p className="text-2xl mb-2">{completionMessage}</p>
+            {workoutSummary.planName && (
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                {workoutSummary.planName} {workoutSummary.dayName && `• ${workoutSummary.dayName}`}
+              </p>
+            )}
+          </div>
+          
+          {/* Stats Grid */}
+          <div className={`p-4 rounded-lg ${
+            darkMode ? 'bg-dark-border' : 'bg-gray-100'
+          }`}>
+            <div className="grid grid-cols-2 gap-4 text-center">
+              <div>
+                <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {workoutSummary.duration}
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Minuten
+                </p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {workoutSummary.exercises.length}
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Übungen
+                </p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {workoutSummary.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)}
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Sätze
+                </p>
+              </div>
+              <div>
+                <p className={`text-2xl font-bold text-primary`}>
+                  {totalWeight.toLocaleString()} kg
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Gesamtgewicht
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {workoutSummary.exercises.map(ex => (
+              <div
+                key={ex.id}
+                className={`p-3 rounded-lg ${
+                  darkMode ? 'bg-dark-border' : 'bg-gray-100'
+                }`}
+              >
+                <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {ex.exerciseName}
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {ex.sets.filter(s => s.completed).length} Sätze • {ex.sets.filter(s => s.completed).reduce((acc, s) => acc + s.reps, 0)} Wdh.
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <Button fullWidth onClick={handleCloseSummary}>
+            Abschließen
+          </Button>
+        </div>
+      )}
+    </Modal>
+  );
+
   // If no active workout, show start options
   if (!activeWorkout) {
     return (
@@ -448,6 +533,8 @@ export function TrainingPage() {
             ))}
           </div>
         </Modal>
+
+        {renderWorkoutSummaryModal()}
       </div>
     );
   }
@@ -862,88 +949,7 @@ export function TrainingPage() {
         </div>
       </Modal>
 
-      {/* Workout Summary Modal - Fixed to always show */}
-      <Modal
-        isOpen={workoutSummary !== null}
-        onClose={handleCloseSummary}
-        title="Training abgeschlossen! 🎉"
-      >
-        {workoutSummary && (
-          <div className="space-y-4">
-            {/* Motivational Message */}
-            <div className="text-center">
-              <p className="text-2xl mb-2">{completionMessage}</p>
-              {workoutSummary.planName && (
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {workoutSummary.planName} {workoutSummary.dayName && `• ${workoutSummary.dayName}`}
-                </p>
-              )}
-            </div>
-            
-            {/* Stats Grid */}
-            <div className={`p-4 rounded-lg ${
-              darkMode ? 'bg-dark-border' : 'bg-gray-100'
-            }`}>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {workoutSummary.duration}
-                  </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Minuten
-                  </p>
-                </div>
-                <div>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {workoutSummary.exercises.length}
-                  </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Übungen
-                  </p>
-                </div>
-                <div>
-                  <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {workoutSummary.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0)}
-                  </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Sätze
-                  </p>
-                </div>
-                <div>
-                  <p className={`text-2xl font-bold text-primary`}>
-                    {totalWeight.toLocaleString()} kg
-                  </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    Gesamtgewicht
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {workoutSummary.exercises.map(ex => (
-                <div
-                  key={ex.id}
-                  className={`p-3 rounded-lg ${
-                    darkMode ? 'bg-dark-border' : 'bg-gray-100'
-                  }`}
-                >
-                  <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {ex.exerciseName}
-                  </p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {ex.sets.filter(s => s.completed).length} Sätze • {ex.sets.filter(s => s.completed).reduce((acc, s) => acc + s.reps, 0)} Wdh.
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <Button fullWidth onClick={handleCloseSummary}>
-              Abschließen
-            </Button>
-          </div>
-        )}
-      </Modal>
+      {renderWorkoutSummaryModal()}
     </div>
   );
 }
