@@ -12,7 +12,8 @@ import {
   Moon,
   ExternalLink,
   Github,
-  Copy
+  Copy,
+  Edit2
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useWorkout } from '../contexts/WorkoutContext';
@@ -29,7 +30,7 @@ type ColorScheme = 'red' | 'blue' | 'purple' | 'orange' | 'green';
 export function SettingsPage() {
   const location = useLocation();
   const { darkMode, toggleDarkMode, colorScheme, setColorScheme } = useTheme();
-  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget } = useWorkout();
+  const { workoutPlans, savePlan, deletePlan, customExercises, customGadgets, addCustomExercise, addCustomGadget, updateCustomExercise, deleteCustomExercise, updateCustomGadget, deleteCustomGadget } = useWorkout();
 
   // Get initial tab from location state
   const getInitialTab = (): TabType => {
@@ -57,6 +58,18 @@ export function SettingsPage() {
   // Custom gadget state
   const [newGadgetName, setNewGadgetName] = useState('');
   const [newGadgetDescription, setNewGadgetDescription] = useState('');
+  
+  // Edit exercise state
+  const [showEditExercise, setShowEditExercise] = useState<Exercise | null>(null);
+  const [editExerciseName, setEditExerciseName] = useState('');
+  const [editExerciseDescription, setEditExerciseDescription] = useState('');
+  const [editExerciseMuscles, setEditExerciseMuscles] = useState('');
+  const [editExerciseGadgets, setEditExerciseGadgets] = useState('');
+  
+  // Edit gadget state
+  const [showEditGadget, setShowEditGadget] = useState<Gadget | null>(null);
+  const [editGadgetName, setEditGadgetName] = useState('');
+  const [editGadgetDescription, setEditGadgetDescription] = useState('');
   
   // Plan creation state
   const [planName, setPlanName] = useState('');
@@ -215,6 +228,65 @@ export function SettingsPage() {
     setNewGadgetName('');
     setNewGadgetDescription('');
     setShowAddGadget(false);
+  };
+
+  const openEditExercise = (exercise: Exercise) => {
+    setShowExerciseDetail(null);
+    setEditExerciseName(exercise.name);
+    setEditExerciseDescription(exercise.description);
+    setEditExerciseMuscles(exercise.muscles.join(', '));
+    setEditExerciseGadgets(exercise.gadgets.join(', '));
+    setShowEditExercise(exercise);
+  };
+
+  const handleUpdateCustomExercise = async () => {
+    if (!showEditExercise || !editExerciseName.trim()) return;
+    
+    const muscles = editExerciseMuscles.split(',').map(m => m.trim()).filter(m => m);
+    const gadgets = editExerciseGadgets.split(',').map(g => g.trim()).filter(g => g);
+    
+    await updateCustomExercise(showEditExercise.id, {
+      name: editExerciseName,
+      description: editExerciseDescription,
+      muscles,
+      gadgets
+    });
+    
+    setShowEditExercise(null);
+    setEditExerciseName('');
+    setEditExerciseDescription('');
+    setEditExerciseMuscles('');
+    setEditExerciseGadgets('');
+  };
+
+  const handleDeleteCustomExercise = async (exercise: Exercise) => {
+    setShowExerciseDetail(null);
+    await deleteCustomExercise(exercise.id);
+  };
+
+  const openEditGadget = (gadget: Gadget) => {
+    setShowGadgetDetail(null);
+    setEditGadgetName(gadget.name);
+    setEditGadgetDescription(gadget.description);
+    setShowEditGadget(gadget);
+  };
+
+  const handleUpdateCustomGadget = async () => {
+    if (!showEditGadget || !editGadgetName.trim()) return;
+    
+    await updateCustomGadget(showEditGadget.id, {
+      name: editGadgetName,
+      description: editGadgetDescription
+    });
+    
+    setShowEditGadget(null);
+    setEditGadgetName('');
+    setEditGadgetDescription('');
+  };
+
+  const handleDeleteCustomGadget = async (gadget: Gadget) => {
+    setShowGadgetDetail(null);
+    await deleteCustomGadget(gadget.id);
   };
 
   const renderContent = () => {
@@ -774,6 +846,27 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
+            {/* Edit and Delete buttons for custom exercises */}
+            {showExerciseDetail.isCustom && (
+              <div className="flex gap-3 pt-4 border-t border-dark-border">
+                <Button
+                  fullWidth
+                  variant="outline"
+                  onClick={() => openEditExercise(showExerciseDetail)}
+                >
+                  <Edit2 size={16} />
+                  Bearbeiten
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => handleDeleteCustomExercise(showExerciseDetail)}
+                >
+                  <Trash2 size={16} />
+                  Löschen
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -785,10 +878,31 @@ export function SettingsPage() {
         title={showGadgetDetail?.name}
       >
         {showGadgetDetail && (
-          <div>
+          <div className="space-y-4">
             <p className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
               {showGadgetDetail.description}
             </p>
+            {/* Edit and Delete buttons for custom gadgets */}
+            {showGadgetDetail.isCustom && (
+              <div className="flex gap-3 pt-4 border-t border-dark-border">
+                <Button
+                  fullWidth
+                  variant="outline"
+                  onClick={() => openEditGadget(showGadgetDetail)}
+                >
+                  <Edit2 size={16} />
+                  Bearbeiten
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => handleDeleteCustomGadget(showGadgetDetail)}
+                >
+                  <Trash2 size={16} />
+                  Löschen
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -902,6 +1016,80 @@ export function SettingsPage() {
           />
           <Button fullWidth onClick={handleAddCustomGadget} disabled={!newGadgetName.trim()}>
             Gadget erstellen
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Edit Exercise Modal */}
+      <Modal
+        isOpen={showEditExercise !== null}
+        onClose={() => {
+          setShowEditExercise(null);
+          setEditExerciseName('');
+          setEditExerciseDescription('');
+          setEditExerciseMuscles('');
+          setEditExerciseGadgets('');
+        }}
+        title="Übung bearbeiten"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            value={editExerciseName}
+            onChange={(e) => setEditExerciseName(e.target.value)}
+            placeholder="z.B. Kurzhantel Schulterdrücken"
+            required
+          />
+          <Input
+            label="Beschreibung"
+            value={editExerciseDescription}
+            onChange={(e) => setEditExerciseDescription(e.target.value)}
+            placeholder="Kurze Beschreibung der Übung"
+          />
+          <Input
+            label="Muskeln (kommagetrennt)"
+            value={editExerciseMuscles}
+            onChange={(e) => setEditExerciseMuscles(e.target.value)}
+            placeholder="z.B. Schultern, Trizeps"
+          />
+          <Input
+            label="Gadgets (kommagetrennt)"
+            value={editExerciseGadgets}
+            onChange={(e) => setEditExerciseGadgets(e.target.value)}
+            placeholder="z.B. Kurzhanteln"
+          />
+          <Button fullWidth onClick={handleUpdateCustomExercise} disabled={!editExerciseName.trim()}>
+            Änderungen speichern
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Edit Gadget Modal */}
+      <Modal
+        isOpen={showEditGadget !== null}
+        onClose={() => {
+          setShowEditGadget(null);
+          setEditGadgetName('');
+          setEditGadgetDescription('');
+        }}
+        title="Gadget bearbeiten"
+      >
+        <div className="space-y-4">
+          <Input
+            label="Name"
+            value={editGadgetName}
+            onChange={(e) => setEditGadgetName(e.target.value)}
+            placeholder="z.B. TRX-Band"
+            required
+          />
+          <Input
+            label="Beschreibung"
+            value={editGadgetDescription}
+            onChange={(e) => setEditGadgetDescription(e.target.value)}
+            placeholder="Kurze Beschreibung des Gadgets"
+          />
+          <Button fullWidth onClick={handleUpdateCustomGadget} disabled={!editGadgetName.trim()}>
+            Änderungen speichern
           </Button>
         </div>
       </Modal>
